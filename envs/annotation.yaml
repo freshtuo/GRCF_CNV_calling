@@ -1,0 +1,13 @@
+name: grcf-cnv-annotation
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.10,<3.13
+  # pandas/PyYAML are script support libraries; minimum versions keep the
+  # scripts readable without over-constraining the solver.
+  - pandas>=2.0,<3.0
+  - pyyaml>=6.0
+  - bedtools>=2.31,<3.0
+  # Pin samtools because BAM QC metrics are part of the pipeline outputs.
+  - samtools=1.23.1

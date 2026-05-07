@@ -1,0 +1,14 @@
+name: grcf-facets
+channels:
+  - conda-forge
+  - bioconda
+  - r
+dependencies:
+  # Pin primary analysis/QC tools so FACETS outputs are reproducible.
+  - samtools=1.23.1
+  - htslib
+  - snp-pileup=0.6.2
+  - r-facets=0.6.2
+  - r-base
+  - r-optparse
+  - r-data.table

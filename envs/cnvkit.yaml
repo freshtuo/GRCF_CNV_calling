@@ -1,0 +1,9 @@
+name: grcf-cnvkit
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Pin primary analysis/QC tools so results are reproducible across runs.
+  - python>=3.10,<3.12
+  - cnvkit=0.9.13
+  - samtools=1.23.1
