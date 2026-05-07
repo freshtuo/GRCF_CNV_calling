@@ -34,10 +34,10 @@ digraph snakemake_rulegraph {
     annotate_cnvkit [label = "annotate_cnvkit\nannotated_segments.tsv\nannotated_genes.tsv", fillcolor = "#dcfce7"];
 
     facets [label = "facets\nper run_facets comparison"];
-    annotate_facets [label = "annotate_facets\nfacets_annotated_*.tsv", fillcolor = "#dbeafe"];
+    annotate_facets [label = "annotate_facets\nannotation/*.tsv", fillcolor = "#dbeafe"];
 
     summarize_results [label = "summarize_results\nsummary TSVs", fillcolor = "#ede9fe"];
-    make_report [label = "make_report\nsummary/report.html", fillcolor = "#ede9fe"];
+    make_report [label = "make_report\nsummary/report.html\nsummary/reports/*.html", fillcolor = "#ede9fe"];
     all [label = "all", shape = doublecircle, fillcolor = "#f8fafc"];
 
     metadata -> validate_metadata;

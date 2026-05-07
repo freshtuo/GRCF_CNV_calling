@@ -64,11 +64,11 @@ So `comparisons.tsv` is the main workflow driver. If a row has `run_cnvkit=yes`,
 The final targets include:
 
 - metadata validation
-- BAM QC for every sample in `samples.tsv`
+- comparison-scoped BAM QC for each case/control BAM used by each comparison
 - CNVkit annotations for every `run_cnvkit=yes` comparison
-- FACETS segments for every `run_facets=yes` comparison
+- FACETS segments and annotations for every `run_facets=yes` comparison
 - merged project summary tables
-- HTML report
+- project-level HTML index and one HTML report per comparison
 
 Conceptually:
 
@@ -78,7 +78,7 @@ samples.tsv + comparisons.tsv + config.yaml
         v
 validate_metadata
         |
-        +--> BAM QC per sample
+        +--> BAM QC per comparison/sample
         |
         +--> CNVkit per run_cnvkit comparison
         |       |
@@ -146,10 +146,13 @@ case_bam=lambda wildcards: sample_bam(comparison_case_id(wildcards.comparison_id
 It verifies:
 
 - required columns exist in `samples.tsv` and `comparisons.tsv`
+- `sample_id` and `comparison_id` values are unique
+- `comparison_id` values are path-safe
 - every sample has BAM and BAI paths
 - BAM and BAI paths exist
 - each comparison's `case_id` exists in `samples.tsv`
 - optional `control_id` exists if provided
+- `case_id` and `control_id` are not identical when a control is provided
 - case/control species match the comparison species
 - species resources exist in `config.yaml`
 - CNVkit is globally enabled if any row has `run_cnvkit=yes`
@@ -165,7 +168,9 @@ Most downstream rules depend on this file, so failed metadata validation stops t
 
 ### BAM QC
 
-BAM QC runs once per sample in `samples.tsv`, independent of how many comparisons use that sample.
+BAM QC runs once per comparison/sample pair. This is intentional because
+BaseSpace/DRAGEN can produce distinct BAM files for the same biological control
+when that control is included in multiple tumor-normal analyses.
 
 The QC rules run:
 
@@ -178,7 +183,9 @@ samtools idxstats sample.bam
 Outputs are written under:
 
 ```text
-results/{project}/qc/samples/{sample_id}/
+results/{project}/qc/{comparison_id}/quickcheck.{sample_id}.txt
+results/{project}/qc/{comparison_id}/flagstat.{sample_id}.txt
+results/{project}/qc/{comparison_id}/idxstats.{sample_id}.txt
 ```
 
 ### CNVkit
@@ -231,8 +238,15 @@ Then downstream CNVkit rules run:
 ```bash
 cnvkit.py call input.cns -o output.call.cns
 cnvkit.py scatter input.cnr -s input.cns -o scatter.pdf
+cnvkit.py scatter input.cnr -s input.cns -o scatter.png
+cnvkit.py scatter input.cnr -s input.cns -c chrN -o chromosomes/chrN.scatter.png
 cnvkit.py diagram input.cns -o diagram.pdf
 ```
+
+The scatter plot is kept in both PDF and PNG formats. PDF is useful for
+editing, but dense WGS scatter PDFs can be slow to open because they contain
+many vector points. PNG is usually easier for quick review. The workflow also
+writes per-chromosome scatter PNGs for focused inspection.
 
 ### FACETS
 
@@ -269,7 +283,8 @@ Rscript scripts/run_facets.R \
     --comparison-id {comparison_id} \
     --segments facets_segments.tsv \
     --purity-ploidy facets_purity_ploidy.tsv \
-    --plot facets.pdf
+    --plot-pdf facets.pdf \
+    --plot-png facets.png
 ```
 
 `run_facets.R` performs:
@@ -287,6 +302,7 @@ It writes:
 results/{project}/facets/{comparison_id}/segments/facets_segments.tsv
 results/{project}/facets/{comparison_id}/purity_ploidy/facets_purity_ploidy.tsv
 results/{project}/facets/{comparison_id}/plots/facets.pdf
+results/{project}/facets/{comparison_id}/plots/facets.png
 ```
 
 ### Annotation
@@ -297,11 +313,8 @@ CNVkit annotation uses:
 
 ```bash
 python scripts/annotate_segments.py \
-    --comparison-id {comparison_id} \
     --source-tool cnvkit \
     --segments {comparison_id}.call.cns \
-    --samples config/samples.tsv \
-    --comparisons config/comparisons.tsv \
     --genes-bed species.genes.bed \
     --thresholds gain,loss,amp,deep_del,focal_mb,broad_mb \
     --out-segments annotated_segments.tsv \
@@ -318,16 +331,10 @@ FACETS annotation uses the same script with:
 The script normalizes segment columns from CNVkit or FACETS into a common schema:
 
 ```text
-comparison_id
-sample_id
-patient_id
-species
-source_tool
 chromosome
 segment_start
 segment_end
 segment_length
-gene_name
 log2_ratio
 total_cn
 minor_cn
@@ -335,6 +342,11 @@ cnv_call
 loh_status
 event_size
 ```
+
+It also harmonizes chromosome naming before the gene overlap step. For example,
+FACETS may emit chromosomes as `1`, while the gene BED may use `chr1`; the
+annotation script makes those styles compatible before running `bedtools
+intersect`.
 
 For CNVkit, calls are based on log2 thresholds from `config.yaml`:
 
@@ -372,8 +384,10 @@ event_size:
 The script overlaps each segment with `genes_bed` and writes:
 
 ```text
-annotation/{comparison_id}/annotated_segments.tsv
-annotation/{comparison_id}/annotated_genes.tsv
+cnvkit/{comparison_id}/annotation/annotated_segments.tsv
+cnvkit/{comparison_id}/annotation/annotated_genes.tsv
+facets/{comparison_id}/annotation/annotated_segments.tsv
+facets/{comparison_id}/annotation/annotated_genes.tsv
 ```
 
 ## Summary And Report
@@ -382,7 +396,7 @@ annotation/{comparison_id}/annotated_genes.tsv
 
 - CNVkit annotated segments and genes
 - FACETS annotated segments and genes
-- sample-level QC outputs
+- comparison-scoped QC outputs
 
 It writes:
 
@@ -396,7 +410,11 @@ results/{project}/summary/all_comparisons.qc.tsv
 
 ```text
 results/{project}/summary/report.html
+results/{project}/summary/reports/{comparison_id}.report.html
 ```
+
+`summary/report.html` is a project-level index. Each comparison also gets its
+own detailed report under `summary/reports/`.
 
 ## Dry-Run Check
 
@@ -461,5 +479,5 @@ Before a real run:
 - Confirm `resources.human.common_snps_vcf` exists if any comparison has `run_facets=yes`.
 - Confirm CNVkit `--method wgs` is appropriate for the BAMs. For targeted/panel/WES data, this may need a different CNVkit setup.
 - Review FACETS defaults in `scripts/run_facets.R`; currently `preProcSample`, `procSample`, and `emcncf` use package defaults.
-- Confirm gene BED chromosome naming matches segment chromosome naming, for example `chr1` versus `1`.
+- Confirm gene BED chromosome naming is compatible with the references. The annotation script can harmonize common `chr1` versus `1` differences.
 - Interpret tumor-only CNVkit results cautiously because germline CNVs cannot be subtracted without a matched control.

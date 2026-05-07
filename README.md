@@ -42,6 +42,11 @@ Validation checks that case/control samples exist, species are consistent, BAM
 and BAI paths exist, and FACETS is only enabled for human paired non-tumor-only
 comparisons.
 
+`comparison_id` values are used in output paths, so they should be unique and
+path-safe: letters, numbers, dots, dashes, and underscores only. Validation also
+rejects duplicate sample/comparison IDs and comparisons where `case_id` and
+`control_id` are the same.
+
 ## Configure
 
 Edit `config/config.yaml` and replace the placeholder paths:
@@ -64,19 +69,22 @@ Outputs are written under:
 
 ```text
 results/{project}/
-  qc/samples/{sample_id}/
+  qc/{comparison_id}/
   cnvkit/{comparison_id}/
+    annotation/
   facets/{comparison_id}/
-  annotation/{comparison_id}/
+    annotation/
   summary/
+    reports/
 ```
 
 The summary outputs are:
 
-- `summary/all_comparisons.segments.tsv`
-- `summary/all_comparisons.genes.tsv`
-- `summary/all_comparisons.qc.tsv`
-- `summary/report.html`
+- `summary/all_comparisons.qc.tsv`: comparison-scoped BAM QC
+- `summary/all_comparisons.segments.tsv`: merged annotated CNV segments
+- `summary/all_comparisons.genes.tsv`: merged affected-gene calls
+- `summary/report.html`: project-level index
+- `summary/reports/{comparison_id}.report.html`: one detailed report per comparison
 
 Tumor-only CNV calls should be interpreted cautiously because germline CNVs
 cannot be removed without a matched control.
