@@ -23,14 +23,14 @@ rule cnvkit_batch:
     log:
         f"{RESULTS}/cnvkit/{{comparison_id}}/cnvkit_batch.log"
     conda:
-        "envs/cnvkit.yaml"
+        "../../envs/cnvkit.yaml"
     shell:
         r"""
         set -euo pipefail
         # Keep the public result layout stable while allowing CNVkit to write
         # its native filenames inside a temporary working directory.
         rm -rf {params.batch_dir}
-        mkdir -p {params.outdir}/cnr {params.outdir}/cns {params.outdir}/calls {params.outdir}/plots {params.outdir}/gene_annotation {params.batch_dir}
+        mkdir -p {params.outdir}/cnr {params.outdir}/cns {params.outdir}/calls {params.outdir}/plots {params.outdir}/annotation {params.batch_dir}
         workdir=$(mktemp -d {params.outdir}/batch_tmp.XXXXXX)
         cnvkit.py batch {params.case_bam} {params.normal_arg} \
             --method wgs \
@@ -48,6 +48,7 @@ rule cnvkit_batch:
         cp -a "$workdir"/. {params.batch_dir}/
         cp "$cnr" {output.cnr}
         cp "$cns" {output.cns}
+        chmod -R u+rwX,g+rX {params.outdir}
         rm -rf "$workdir"
         """
 
@@ -63,7 +64,7 @@ rule cnvkit_call:
     log:
         f"{RESULTS}/cnvkit/{{comparison_id}}/calls/cnvkit_call.log"
     conda:
-        "envs/cnvkit.yaml"
+        "../../envs/cnvkit.yaml"
     shell:
         "cnvkit.py call {input.cns} -o {output.call_cns} > {log} 2>&1"
 
@@ -74,15 +75,31 @@ rule cnvkit_scatter:
         cnr=CNVKIT_CNR,
         cns=CNVKIT_CNS
     output:
-        f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{'{comparison_id}'}.scatter.pdf"
+        pdf=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{{comparison_id}}.scatter.pdf",
+        png=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{{comparison_id}}.scatter.png",
+        chrom_done=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/chromosomes/{{comparison_id}}.done"
     resources:
         mem_mb=int(config.get("cnvkit", {}).get("mem_mb", 8000))
     log:
         f"{RESULTS}/cnvkit/{{comparison_id}}/plots/scatter.log"
     conda:
-        "envs/cnvkit.yaml"
+        "../../envs/cnvkit.yaml"
+    params:
+        fig_size=config.get("cnvkit", {}).get("scatter_fig_size", "18 5"),
+        chrom_fig_size=config.get("cnvkit", {}).get("chromosome_scatter_fig_size", "14 5")
     shell:
-        "cnvkit.py scatter {input.cnr} -s {input.cns} -o {output} > {log} 2>&1"
+        r"""
+        set -euo pipefail
+        mkdir -p "$(dirname {output.pdf})" "$(dirname {output.chrom_done})"
+        cnvkit.py scatter {input.cnr} -s {input.cns} --fig-size {params.fig_size} -o {output.pdf} > {log} 2>&1
+        cnvkit.py scatter {input.cnr} -s {input.cns} --fig-size {params.fig_size} -o {output.png} >> {log} 2>&1
+        cut -f1 {input.cnr} | tail -n +2 | sort -u | while read -r chrom; do
+            test -n "$chrom" || continue
+            cnvkit.py scatter {input.cnr} -s {input.cns} -c "$chrom" --fig-size {params.chrom_fig_size} \
+                -o "$(dirname {output.chrom_done})/{wildcards.comparison_id}.${{chrom}}.scatter.png" >> {log} 2>&1
+        done
+        touch {output.chrom_done}
+        """
 
 
 # Produce a chromosome-level CNV diagram from the CNVkit segments.
@@ -96,6 +113,6 @@ rule cnvkit_diagram:
     log:
         f"{RESULTS}/cnvkit/{{comparison_id}}/plots/diagram.log"
     conda:
-        "envs/cnvkit.yaml"
+        "../../envs/cnvkit.yaml"
     shell:
         "cnvkit.py diagram {input.cns} -o {output} > {log} 2>&1"

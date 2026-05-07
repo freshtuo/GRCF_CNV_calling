@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -36,6 +37,12 @@ def require_columns(kind, actual, required, errors):
         errors.append(f"{kind} is missing required columns: {', '.join(missing)}")
 
 
+def duplicate_values(frame, column):
+    """Return duplicated non-empty values from a metadata column."""
+    values = frame[column].astype(str).str.strip()
+    return sorted(value for value in values[values.duplicated()].unique() if value)
+
+
 def main():
     """Validate config, samples.tsv, and comparisons.tsv before workflow jobs run."""
     parser = argparse.ArgumentParser()
@@ -57,6 +64,20 @@ def main():
     # Check file structure first. Later checks assume these columns are present.
     require_columns("samples.tsv", set(samples.columns), REQUIRED_SAMPLE_COLUMNS, errors)
     require_columns("comparisons.tsv", set(comparisons.columns), REQUIRED_COMPARISON_COLUMNS, errors)
+    if errors:
+        write_log(args.log, warnings, errors)
+        raise SystemExit(f"Metadata validation failed with {len(errors)} error(s); see {args.log}")
+
+    for sample_id in duplicate_values(samples, "sample_id"):
+        errors.append(f"samples.tsv has duplicate sample_id: {sample_id}")
+    for comparison_id in duplicate_values(comparisons, "comparison_id"):
+        errors.append(f"comparisons.tsv has duplicate comparison_id: {comparison_id}")
+    for comparison_id in comparisons["comparison_id"].astype(str):
+        if not re.match(r"^[A-Za-z0-9_.-]+$", comparison_id):
+            errors.append(
+                "comparisons.tsv comparison_id should contain only letters, "
+                f"numbers, dot, underscore, or dash: {comparison_id}"
+            )
     if errors:
         write_log(args.log, warnings, errors)
         raise SystemExit(f"Metadata validation failed with {len(errors)} error(s); see {args.log}")
@@ -83,6 +104,9 @@ def main():
         case_id = row["case_id"]
         control_id = row["control_id"].strip()
         comparison_type = row["comparison_type"]
+
+        if control_id and control_id == case_id:
+            errors.append(f"Comparison {cid} has the same case_id and control_id: {case_id}")
 
         # The case sample is mandatory. If it is missing, the rest of this
         # comparison cannot be interpreted safely.

@@ -34,6 +34,17 @@ CNVKIT_COMPARISONS = [
 FACETS_COMPARISONS = [
     cid for cid, row in COMPARISONS.items() if _is_yes(row.get("run_facets", ""))
 ]
+COMPARISON_IDS = list(COMPARISONS.keys())
+
+QC_RECORDS = []
+for cid, row in COMPARISONS.items():
+    QC_RECORDS.append({"comparison_id": cid, "sample_id": row["case_id"]})
+    control_id = row.get("control_id", "").strip()
+    if control_id:
+        QC_RECORDS.append({"comparison_id": cid, "sample_id": control_id})
+
+QC_COMPARISON_IDS = [row["comparison_id"] for row in QC_RECORDS]
+QC_SAMPLE_IDS = [row["sample_id"] for row in QC_RECORDS]
 
 
 def sample_bam(sample_id):
@@ -72,3 +83,8 @@ def species_resource(comparison_id, key):
 CNVKIT_CNR = f"{RESULTS}/cnvkit/{{comparison_id}}/cnr/{{comparison_id}}.cnr"
 CNVKIT_CNS = f"{RESULTS}/cnvkit/{{comparison_id}}/cns/{{comparison_id}}.cns"
 CNVKIT_CALL_CNS = f"{RESULTS}/cnvkit/{{comparison_id}}/calls/{{comparison_id}}.call.cns"
+CNVKIT_ANNOTATED_SEGMENTS = f"{RESULTS}/cnvkit/{{comparison_id}}/annotation/annotated_segments.tsv"
+CNVKIT_ANNOTATED_GENES = f"{RESULTS}/cnvkit/{{comparison_id}}/annotation/annotated_genes.tsv"
+FACETS_SEGMENTS = f"{RESULTS}/facets/{{comparison_id}}/segments/facets_segments.tsv"
+FACETS_ANNOTATED_SEGMENTS = f"{RESULTS}/facets/{{comparison_id}}/annotation/annotated_segments.tsv"
+FACETS_ANNOTATED_GENES = f"{RESULTS}/facets/{{comparison_id}}/annotation/annotated_genes.tsv"

@@ -59,6 +59,51 @@ def load_genes(path):
     return gene_frame
 
 
+def chromosome_style(values):
+    """Return whether most chromosome labels use a chr prefix."""
+    labels = [str(value) for value in values.dropna().unique() if str(value)]
+    if not labels:
+        return "unknown"
+    chr_count = sum(label.startswith("chr") for label in labels)
+    return "chr" if chr_count >= len(labels) / 2 else "bare"
+
+
+def add_chr_prefix(value):
+    """Convert bare chromosome labels to UCSC-style labels."""
+    label = str(value)
+    if label.startswith("chr") or not label:
+        return label
+    if label in {"M", "MT", "Mt", "mt"}:
+        return "chrM"
+    return f"chr{label}"
+
+
+def strip_chr_prefix(value):
+    """Convert UCSC-style chromosome labels to bare labels."""
+    label = str(value)
+    if label == "chrM":
+        return "MT"
+    if label.startswith("chr"):
+        return label[3:]
+    return label
+
+
+def harmonize_chromosomes(segments, genes):
+    """Make segment and gene chromosome labels compatible before intersection."""
+    segment_style = chromosome_style(segments["chromosome"])
+    gene_style = chromosome_style(genes["chromosome"])
+    if segment_style == gene_style or "unknown" in {segment_style, gene_style}:
+        return segments, genes
+
+    segments = segments.copy()
+    genes = genes.copy()
+    if gene_style == "chr":
+        segments["chromosome"] = segments["chromosome"].map(add_chr_prefix)
+    else:
+        genes["chromosome"] = genes["chromosome"].map(strip_chr_prefix)
+    return segments, genes
+
+
 def first_existing_column(frame, choices):
     """Return the first available column name from a list of possible names."""
     return next((name for name in choices if name in frame.columns), None)
@@ -313,6 +358,7 @@ def main():
         focal_bp,
         broad_bp,
     )
+    segment_rows, genes = harmonize_chromosomes(segment_rows, genes)
     overlaps = annotate_gene_overlaps(
         segment_rows,
         genes,

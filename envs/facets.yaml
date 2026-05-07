@@ -1,4 +1,4 @@
-name: grcf-facets
+name: facets
 channels:
   - conda-forge
   - bioconda

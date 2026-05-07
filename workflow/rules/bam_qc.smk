@@ -6,11 +6,11 @@ rule samtools_quickcheck:
     params:
         bam=lambda wildcards: sample_bam(wildcards.sample_id)
     output:
-        f"{RESULTS}/qc/samples/{{sample_id}}/quickcheck.txt"
+        f"{RESULTS}/qc/{{comparison_id}}/quickcheck.{{sample_id}}.txt"
     log:
-        f"{RESULTS}/qc/samples/{{sample_id}}/quickcheck.log"
+        f"{RESULTS}/qc/{{comparison_id}}/quickcheck.{{sample_id}}.log"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {output}) $(dirname {log}); "
         "samtools quickcheck -v {params.bam} > {output} 2> {log}"
@@ -23,11 +23,11 @@ rule samtools_flagstat:
     params:
         bam=lambda wildcards: sample_bam(wildcards.sample_id)
     output:
-        f"{RESULTS}/qc/samples/{{sample_id}}/flagstat.txt"
+        f"{RESULTS}/qc/{{comparison_id}}/flagstat.{{sample_id}}.txt"
     log:
-        f"{RESULTS}/qc/samples/{{sample_id}}/flagstat.log"
+        f"{RESULTS}/qc/{{comparison_id}}/flagstat.{{sample_id}}.log"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {output}) $(dirname {log}); "
         "samtools flagstat {params.bam} > {output} 2> {log}"
@@ -40,11 +40,11 @@ rule samtools_idxstats:
     params:
         bam=lambda wildcards: sample_bam(wildcards.sample_id)
     output:
-        f"{RESULTS}/qc/samples/{{sample_id}}/idxstats.txt"
+        f"{RESULTS}/qc/{{comparison_id}}/idxstats.{{sample_id}}.txt"
     log:
-        f"{RESULTS}/qc/samples/{{sample_id}}/idxstats.log"
+        f"{RESULTS}/qc/{{comparison_id}}/idxstats.{{sample_id}}.log"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {output}) $(dirname {log}); "
         "samtools idxstats {params.bam} > {output} 2> {log}"

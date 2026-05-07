@@ -2,47 +2,69 @@
 # their per-comparison, per-caller files to keep interpretation contexts clear.
 rule summarize_results:
     input:
-        qc=expand(f"{RESULTS}/qc/samples/{{sample_id}}/flagstat.txt", sample_id=SAMPLES.keys())
+        qc_flagstat=expand(
+            f"{RESULTS}/qc/{{comparison_id}}/flagstat.{{sample_id}}.txt",
+            zip,
+            comparison_id=QC_COMPARISON_IDS,
+            sample_id=QC_SAMPLE_IDS,
+        ),
+        qc_quickcheck=expand(
+            f"{RESULTS}/qc/{{comparison_id}}/quickcheck.{{sample_id}}.txt",
+            zip,
+            comparison_id=QC_COMPARISON_IDS,
+            sample_id=QC_SAMPLE_IDS,
+        ),
+        cnvkit_segments=expand(CNVKIT_ANNOTATED_SEGMENTS, comparison_id=CNVKIT_COMPARISONS),
+        cnvkit_genes=expand(CNVKIT_ANNOTATED_GENES, comparison_id=CNVKIT_COMPARISONS),
+        facets_segments=expand(FACETS_ANNOTATED_SEGMENTS, comparison_id=FACETS_COMPARISONS),
+        facets_genes=expand(FACETS_ANNOTATED_GENES, comparison_id=FACETS_COMPARISONS)
     output:
-        qc=f"{RESULTS}/summary/qc.tsv"
+        qc=f"{RESULTS}/summary/all_comparisons.qc.tsv",
+        segments=f"{RESULTS}/summary/all_comparisons.segments.tsv",
+        genes=f"{RESULTS}/summary/all_comparisons.genes.tsv"
     log:
         f"{RESULTS}/summary/summarize.log"
     params:
         samples=SAMPLES_TSV,
+        comparisons=COMPARISONS_TSV,
         results=lambda wildcards, output: str(Path(output.qc).parents[1])
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {log}); "
         "python scripts/summarize_cnv.py "
         "--samples {params.samples} "
+        "--comparisons {params.comparisons} "
         "--results {params.results} "
-        "--out-qc {output.qc} > {log} 2>&1"
+        "--out-qc {output.qc} "
+        "--out-segments {output.segments} "
+        "--out-genes {output.genes} > {log} 2>&1"
 
 
 # Create a lightweight HTML report from separate caller annotations and QC.
 rule make_report:
     input:
-        cnvkit_segments=expand(f"{RESULTS}/annotation/{{comparison_id}}/annotated_segments.tsv", comparison_id=CNVKIT_COMPARISONS),
-        cnvkit_genes=expand(f"{RESULTS}/annotation/{{comparison_id}}/annotated_genes.tsv", comparison_id=CNVKIT_COMPARISONS),
-        facets_segments=expand(f"{RESULTS}/facets/{{comparison_id}}/segments/facets_annotated_segments.tsv", comparison_id=FACETS_COMPARISONS),
-        facets_genes=expand(f"{RESULTS}/facets/{{comparison_id}}/segments/facets_annotated_genes.tsv", comparison_id=FACETS_COMPARISONS),
-        qc=f"{RESULTS}/summary/qc.tsv"
+        qc=f"{RESULTS}/summary/all_comparisons.qc.tsv",
+        segments=f"{RESULTS}/summary/all_comparisons.segments.tsv",
+        genes=f"{RESULTS}/summary/all_comparisons.genes.tsv"
     output:
-        f"{RESULTS}/summary/report.html"
+        index=f"{RESULTS}/summary/report.html",
+        comparison_reports=expand(f"{RESULTS}/summary/reports/{{comparison_id}}.report.html", comparison_id=COMPARISON_IDS)
     log:
         f"{RESULTS}/summary/report.log"
     params:
-        project=PROJECT
+        project=PROJECT,
+        comparisons=COMPARISONS_TSV,
+        reports_dir=lambda wildcards, output: str(Path(output.index).parent / "reports")
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {log}); "
         "python scripts/make_report.py "
         "--project {params.project} "
-        "--cnvkit-segments {input.cnvkit_segments} "
-        "--cnvkit-genes {input.cnvkit_genes} "
-        "--facets-segments {input.facets_segments} "
-        "--facets-genes {input.facets_genes} "
+        "--comparisons {params.comparisons} "
         "--qc {input.qc} "
-        "--output {output} > {log} 2>&1"
+        "--segments {input.segments} "
+        "--genes {input.genes} "
+        "--reports-dir {params.reports_dir} "
+        "--output {output.index} > {log} 2>&1"

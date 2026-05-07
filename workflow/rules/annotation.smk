@@ -4,11 +4,11 @@ rule annotate_cnvkit:
     input:
         call_cns=CNVKIT_CALL_CNS,
         cns=CNVKIT_CNS,
-        scatter=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{'{comparison_id}'}.scatter.pdf",
+        scatter=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{'{comparison_id}'}.scatter.png",
         diagram=f"{RESULTS}/cnvkit/{{comparison_id}}/plots/{'{comparison_id}'}.diagram.pdf"
     output:
-        segments=f"{RESULTS}/annotation/{{comparison_id}}/annotated_segments.tsv",
-        genes=f"{RESULTS}/annotation/{{comparison_id}}/annotated_genes.tsv"
+        segments=CNVKIT_ANNOTATED_SEGMENTS,
+        genes=CNVKIT_ANNOTATED_GENES
     params:
         genes_bed=lambda wildcards: species_resource(wildcards.comparison_id, "genes_bed"),
         thresholds=lambda wildcards: ",".join([
@@ -22,9 +22,9 @@ rule annotate_cnvkit:
         min_gene_overlap_bp=lambda wildcards: config.get("annotation", {}).get("min_gene_overlap_bp", 1),
         min_gene_overlap_fraction=lambda wildcards: config.get("annotation", {}).get("min_gene_overlap_fraction", 0.0)
     log:
-        f"{RESULTS}/annotation/{{comparison_id}}/annotation.log"
+        f"{RESULTS}/cnvkit/{{comparison_id}}/annotation/annotation.log"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {log}); "
         "python scripts/annotate_segments.py "
@@ -42,10 +42,10 @@ rule annotate_cnvkit:
 # The same annotation script normalizes FACETS columns into the shared schema.
 rule annotate_facets:
     input:
-        segments=f"{RESULTS}/facets/{{comparison_id}}/segments/facets_segments.tsv"
+        segments=FACETS_SEGMENTS
     output:
-        segments=f"{RESULTS}/facets/{{comparison_id}}/segments/facets_annotated_segments.tsv",
-        genes=f"{RESULTS}/facets/{{comparison_id}}/segments/facets_annotated_genes.tsv"
+        segments=FACETS_ANNOTATED_SEGMENTS,
+        genes=FACETS_ANNOTATED_GENES
     params:
         genes_bed=lambda wildcards: species_resource(wildcards.comparison_id, "genes_bed"),
         thresholds=lambda wildcards: ",".join([
@@ -59,9 +59,9 @@ rule annotate_facets:
         min_gene_overlap_bp=lambda wildcards: config.get("annotation", {}).get("min_gene_overlap_bp", 1),
         min_gene_overlap_fraction=lambda wildcards: config.get("annotation", {}).get("min_gene_overlap_fraction", 0.0)
     log:
-        f"{RESULTS}/facets/{{comparison_id}}/segments/facets_annotation.log"
+        f"{RESULTS}/facets/{{comparison_id}}/annotation/annotation.log"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "mkdir -p $(dirname {log}); "
         "python scripts/annotate_segments.py "

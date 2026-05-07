@@ -10,7 +10,8 @@ option_list <- list(
   make_option("--comparison-id", type = "character"),
   make_option("--segments", type = "character"),
   make_option("--purity-ploidy", type = "character"),
-  make_option("--plot", type = "character")
+  make_option("--plot-pdf", type = "character"),
+  make_option("--plot-png", type = "character")
 )
 opt <- parse_args(OptionParser(option_list = option_list))
 
@@ -19,7 +20,11 @@ xx <- preProcSample(rcmat)
 oo <- procSample(xx)
 fit <- emcncf(oo)
 
-pdf(opt$plot)
+pdf(opt$`plot-pdf`)
+plotSample(x = oo, emfit = fit)
+dev.off()
+
+png(opt$`plot-png`, width = 1800, height = 1200, res = 150)
 plotSample(x = oo, emfit = fit)
 dev.off()
 

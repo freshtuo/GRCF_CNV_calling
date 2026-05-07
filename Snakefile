@@ -18,15 +18,35 @@ rule all:
     input:
         # Metadata validation is a prerequisite for every analysis step.
         f"{RESULTS}/metadata/validated.ok",
-        # QC runs once per physical sample listed in samples.tsv.
-        expand(f"{RESULTS}/qc/samples/{{sample_id}}/quickcheck.txt", sample_id=SAMPLES.keys()),
-        expand(f"{RESULTS}/qc/samples/{{sample_id}}/flagstat.txt", sample_id=SAMPLES.keys()),
-        expand(f"{RESULTS}/qc/samples/{{sample_id}}/idxstats.txt", sample_id=SAMPLES.keys()),
+        # QC is comparison-scoped because BaseSpace/DRAGEN may produce a
+        # distinct BAM for the same biological control in different analyses.
+        expand(
+            f"{RESULTS}/qc/{{comparison_id}}/quickcheck.{{sample_id}}.txt",
+            zip,
+            comparison_id=QC_COMPARISON_IDS,
+            sample_id=QC_SAMPLE_IDS,
+        ),
+        expand(
+            f"{RESULTS}/qc/{{comparison_id}}/flagstat.{{sample_id}}.txt",
+            zip,
+            comparison_id=QC_COMPARISON_IDS,
+            sample_id=QC_SAMPLE_IDS,
+        ),
+        expand(
+            f"{RESULTS}/qc/{{comparison_id}}/idxstats.{{sample_id}}.txt",
+            zip,
+            comparison_id=QC_COMPARISON_IDS,
+            sample_id=QC_SAMPLE_IDS,
+        ),
         # CNVkit annotation runs once per comparison with run_cnvkit=yes.
-        expand(f"{RESULTS}/annotation/{{comparison_id}}/annotated_segments.tsv", comparison_id=CNVKIT_COMPARISONS),
-        expand(f"{RESULTS}/annotation/{{comparison_id}}/annotated_genes.tsv", comparison_id=CNVKIT_COMPARISONS),
+        expand(CNVKIT_ANNOTATED_SEGMENTS, comparison_id=CNVKIT_COMPARISONS),
+        expand(CNVKIT_ANNOTATED_GENES, comparison_id=CNVKIT_COMPARISONS),
         # FACETS runs only for comparison rows with run_facets=yes.
-        expand(f"{RESULTS}/facets/{{comparison_id}}/segments/facets_segments.tsv", comparison_id=FACETS_COMPARISONS),
-        # Summary/report files keep CNV caller outputs separate and summarize QC.
-        f"{RESULTS}/summary/qc.tsv",
+        expand(FACETS_SEGMENTS, comparison_id=FACETS_COMPARISONS),
+        expand(FACETS_ANNOTATED_SEGMENTS, comparison_id=FACETS_COMPARISONS),
+        expand(FACETS_ANNOTATED_GENES, comparison_id=FACETS_COMPARISONS),
+        # Summary/report files keep project-level indexes and per-comparison pages.
+        f"{RESULTS}/summary/all_comparisons.qc.tsv",
+        f"{RESULTS}/summary/all_comparisons.segments.tsv",
+        f"{RESULTS}/summary/all_comparisons.genes.tsv",
         f"{RESULTS}/summary/report.html"

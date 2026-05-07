@@ -1,4 +1,4 @@
-name: grcf-cnvkit
+name: cnvkit
 channels:
   - conda-forge
   - bioconda

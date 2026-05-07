@@ -11,7 +11,7 @@ rule validate_metadata:
     params:
         config_yaml="config/config.yaml"
     conda:
-        "envs/annotation.yaml"
+        "../../envs/annotation.yaml"
     shell:
         "python scripts/validate_metadata.py "
         "--config {params.config_yaml} "

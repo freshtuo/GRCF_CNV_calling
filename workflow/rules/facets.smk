@@ -4,9 +4,10 @@ rule facets:
     input:
         validated=f"{RESULTS}/metadata/validated.ok"
     output:
-        segments=f"{RESULTS}/facets/{{comparison_id}}/segments/facets_segments.tsv",
+        segments=FACETS_SEGMENTS,
         purity_ploidy=f"{RESULTS}/facets/{{comparison_id}}/purity_ploidy/facets_purity_ploidy.tsv",
-        plot=f"{RESULTS}/facets/{{comparison_id}}/plots/facets.pdf"
+        plot_pdf=f"{RESULTS}/facets/{{comparison_id}}/plots/facets.pdf",
+        plot_png=f"{RESULTS}/facets/{{comparison_id}}/plots/facets.png"
     params:
         common_snps=lambda wildcards: config["resources"]["human"].get("common_snps_vcf", ""),
         case_bam=lambda wildcards: sample_bam(comparison_case_id(wildcards.comparison_id)),
@@ -16,7 +17,7 @@ rule facets:
     log:
         f"{RESULTS}/facets/{{comparison_id}}/facets.log"
     conda:
-        "envs/facets.yaml"
+        "../../envs/facets.yaml"
     shell:
         r"""
         set -euo pipefail
@@ -33,5 +34,6 @@ rule facets:
             --comparison-id {params.comparison_id} \
             --segments {output.segments} \
             --purity-ploidy {output.purity_ploidy} \
-            --plot {output.plot} >> {log} 2>&1
+            --plot-pdf {output.plot_pdf} \
+            --plot-png {output.plot_png} >> {log} 2>&1
         """
