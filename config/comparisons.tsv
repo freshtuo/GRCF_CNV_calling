@@ -1,0 +1,7 @@
+comparison_id	patient_id	species	case_id	control_id	comparison_type	run_cnvkit	run_facets
+P1_N1_vs_B1	P1	human	N1	B1	normal_vs_germline	yes	no
+P1_NO1_vs_B1	P1	human	NO1	B1	normal_organoid_vs_germline	yes	no
+P1_T1_vs_B1	P1	human	T1	B1	tumor_vs_germline	yes	yes
+P1_TO1_vs_B1	P1	human	TO1	B1	tumor_organoid_vs_germline	yes	yes
+P1_T1_vs_N1	P1	human	T1	N1	tumor_vs_normal_tissue	yes	yes
+P2_T2_tumor_only	P2	human	T2		tumor_only	yes	no

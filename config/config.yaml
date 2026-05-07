@@ -1,0 +1,42 @@
+project: test_cnv_project
+outdir: results
+
+samples_tsv: config/samples.tsv
+comparisons_tsv: config/comparisons.tsv
+
+resources:
+  human:
+    fasta: /path/hg38.fa
+    access_bed: /path/hg38.access.bed
+    genes_bed: /path/hg38.genes.bed
+    cnvkit_annotate: /path/hg38.refFlat.txt
+    common_snps_vcf: /path/dbsnp_common_snps.vcf.gz
+  mouse:
+    fasta: /path/mm10.fa
+    access_bed: /path/mm10.access.bed
+    genes_bed: /path/mm10.genes.bed
+    cnvkit_annotate: /path/mm10.refFlat.txt
+
+tools:
+  cnvkit: true
+  facets: true
+
+cnvkit:
+  threads: 4
+  mem_mb: 16000
+
+cnv_thresholds:
+  gain: 0.3
+  loss: -0.3
+  amp: 1.0
+  deep_del: -1.0
+
+event_size:
+  focal_mb: 5
+  broad_mb: 10
+
+annotation:
+  # A gene is reported for a CNV segment when both overlap filters pass.
+  # Defaults keep any BEDTools-reported overlap, including 1 bp boundary hits.
+  min_gene_overlap_bp: 1
+  min_gene_overlap_fraction: 0.0

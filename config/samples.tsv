@@ -1,0 +1,7 @@
+sample_id	patient_id	species	sample_type	bam	bai
+B1	P1	human	blood	/path/blood.bam	/path/blood.bam.bai
+N1	P1	human	normal_tissue	/path/normal_tissue.bam	/path/normal_tissue.bam.bai
+NO1	P1	human	normal_organoid	/path/normal_organoid.bam	/path/normal_organoid.bam.bai
+T1	P1	human	tumor_tissue	/path/tumor.bam	/path/tumor.bam.bai
+TO1	P1	human	tumor_organoid	/path/tumor_organoid.bam	/path/tumor_organoid.bam.bai
+T2	P2	human	tumor_tissue	/path/p2_tumor.bam	/path/p2_tumor.bam.bai
