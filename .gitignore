@@ -1,0 +1,7 @@
+.snakemake/
+results/
+logs/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.codex
