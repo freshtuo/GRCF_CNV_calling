@@ -1,5 +1,5 @@
-# Merge per-sample QC into one project table. CNV caller annotations stay in
-# their per-comparison, per-caller files to keep interpretation contexts clear.
+# Merge comparison-scoped QC and caller-level CNV counts into project summaries.
+# Detailed annotations stay in per-comparison, per-caller output folders.
 rule summarize_results:
     input:
         qc_flagstat=expand(
@@ -20,8 +20,8 @@ rule summarize_results:
         facets_genes=expand(FACETS_ANNOTATED_GENES, comparison_id=FACETS_COMPARISONS)
     output:
         qc=f"{RESULTS}/summary/all_comparisons.qc.tsv",
-        segments=f"{RESULTS}/summary/all_comparisons.segments.tsv",
-        genes=f"{RESULTS}/summary/all_comparisons.genes.tsv"
+        cnv_summary=f"{RESULTS}/summary/all_comparisons.cnv_summary.tsv",
+        purity_ploidy=f"{RESULTS}/summary/all_comparisons.purity_ploidy.tsv"
     log:
         f"{RESULTS}/summary/summarize.log"
     params:
@@ -37,16 +37,16 @@ rule summarize_results:
         "--comparisons {params.comparisons} "
         "--results {params.results} "
         "--out-qc {output.qc} "
-        "--out-segments {output.segments} "
-        "--out-genes {output.genes} > {log} 2>&1"
+        "--out-cnv-summary {output.cnv_summary} "
+        "--out-purity-ploidy {output.purity_ploidy} > {log} 2>&1"
 
 
 # Create a lightweight HTML report from separate caller annotations and QC.
 rule make_report:
     input:
         qc=f"{RESULTS}/summary/all_comparisons.qc.tsv",
-        segments=f"{RESULTS}/summary/all_comparisons.segments.tsv",
-        genes=f"{RESULTS}/summary/all_comparisons.genes.tsv"
+        cnv_summary=f"{RESULTS}/summary/all_comparisons.cnv_summary.tsv",
+        purity_ploidy=f"{RESULTS}/summary/all_comparisons.purity_ploidy.tsv"
     output:
         index=f"{RESULTS}/summary/report.html",
         comparison_reports=expand(f"{RESULTS}/summary/reports/{{comparison_id}}.report.html", comparison_id=COMPARISON_IDS)
@@ -55,6 +55,7 @@ rule make_report:
     params:
         project=PROJECT,
         comparisons=COMPARISONS_TSV,
+        results_dir=lambda wildcards, output: str(Path(output.index).parents[1]),
         reports_dir=lambda wildcards, output: str(Path(output.index).parent / "reports")
     conda:
         "../../envs/annotation.yaml"
@@ -64,7 +65,8 @@ rule make_report:
         "--project {params.project} "
         "--comparisons {params.comparisons} "
         "--qc {input.qc} "
-        "--segments {input.segments} "
-        "--genes {input.genes} "
+        "--cnv-summary {input.cnv_summary} "
+        "--purity-ploidy {input.purity_ploidy} "
+        "--results-dir {params.results_dir} "
         "--reports-dir {params.reports_dir} "
         "--output {output.index} > {log} 2>&1"

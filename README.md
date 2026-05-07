@@ -81,8 +81,8 @@ results/{project}/
 The summary outputs are:
 
 - `summary/all_comparisons.qc.tsv`: comparison-scoped BAM QC
-- `summary/all_comparisons.segments.tsv`: merged annotated CNV segments
-- `summary/all_comparisons.genes.tsv`: merged affected-gene calls
+- `summary/all_comparisons.cnv_summary.tsv`: CNV event counts by comparison and caller
+- `summary/all_comparisons.purity_ploidy.tsv`: FACETS purity/ploidy when available
 - `summary/report.html`: project-level index
 - `summary/reports/{comparison_id}.report.html`: one detailed report per comparison
 

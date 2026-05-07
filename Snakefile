@@ -47,6 +47,6 @@ rule all:
         expand(FACETS_ANNOTATED_GENES, comparison_id=FACETS_COMPARISONS),
         # Summary/report files keep project-level indexes and per-comparison pages.
         f"{RESULTS}/summary/all_comparisons.qc.tsv",
-        f"{RESULTS}/summary/all_comparisons.segments.tsv",
-        f"{RESULTS}/summary/all_comparisons.genes.tsv",
+        f"{RESULTS}/summary/all_comparisons.cnv_summary.tsv",
+        f"{RESULTS}/summary/all_comparisons.purity_ploidy.tsv",
         f"{RESULTS}/summary/report.html"

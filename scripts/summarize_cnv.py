@@ -59,17 +59,6 @@ def comparison_qc_rows(samples, comparisons, results):
     return rows
 
 
-def add_context(frame, comparison, caller):
-    """Add comparison and caller metadata to an annotated CNV table."""
-    frame = frame.copy()
-    frame.insert(0, "caller", caller)
-    frame.insert(0, "comparison_type", comparison["comparison_type"])
-    frame.insert(0, "species", comparison["species"])
-    frame.insert(0, "patient_id", comparison["patient_id"])
-    frame.insert(0, "comparison_id", comparison["comparison_id"])
-    return frame
-
-
 def read_optional_tsv(path):
     """Read a TSV file if it exists, otherwise return an empty table."""
     if not Path(path).exists():
@@ -80,24 +69,90 @@ def read_optional_tsv(path):
         return pd.DataFrame()
 
 
-def merged_annotation_rows(comparisons, results, table_name):
-    """Merge caller annotation tables across all enabled comparisons."""
-    frames = []
+def count_value(frame, column, value):
+    """Count rows where a column equals a value."""
+    if frame.empty or column not in frame.columns:
+        return 0
+    return int((frame[column] == value).sum())
+
+
+def unique_gene_count(frame):
+    """Count unique non-empty genes in an affected-gene table."""
+    if frame.empty or "gene_name" not in frame.columns:
+        return 0
+    genes = frame["gene_name"].fillna("").astype(str)
+    return int(genes.loc[(genes != "") & (genes != ".")].nunique())
+
+
+def purity_ploidy_path(results, comparison_id):
+    """Return the FACETS purity/ploidy output path for a comparison."""
+    return f"{results}/facets/{comparison_id}/purity_ploidy/facets_purity_ploidy.tsv"
+
+
+def read_purity_ploidy(results, comparison_id):
+    """Read FACETS purity/ploidy values if available."""
+    frame = read_optional_tsv(purity_ploidy_path(results, comparison_id))
+    if frame.empty:
+        return {"purity": "", "ploidy": ""}
+    row = frame.iloc[0].to_dict()
+    return {"purity": row.get("purity", ""), "ploidy": row.get("ploidy", "")}
+
+
+def cnv_summary_rows(comparisons, results):
+    """Build one CNV overview row per comparison and caller."""
+    rows = []
     for comparison in comparisons.to_dict(orient="records"):
         cid = comparison["comparison_id"]
         if str(comparison.get("run_cnvkit", "")).strip().lower() in {"yes", "true", "1", "y"}:
-            path = f"{results}/cnvkit/{cid}/annotation/annotated_{table_name}.tsv"
-            frame = read_optional_tsv(path)
-            if not frame.empty:
-                frames.append(add_context(frame, comparison, "cnvkit"))
+            segments = read_optional_tsv(f"{results}/cnvkit/{cid}/annotation/annotated_segments.tsv")
+            genes = read_optional_tsv(f"{results}/cnvkit/{cid}/annotation/annotated_genes.tsv")
+            rows.append(summary_row(comparison, "cnvkit", segments, genes, "", ""))
         if str(comparison.get("run_facets", "")).strip().lower() in {"yes", "true", "1", "y"}:
-            path = f"{results}/facets/{cid}/annotation/annotated_{table_name}.tsv"
-            frame = read_optional_tsv(path)
-            if not frame.empty:
-                frames.append(add_context(frame, comparison, "facets"))
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True, sort=False)
+            segments = read_optional_tsv(f"{results}/facets/{cid}/annotation/annotated_segments.tsv")
+            genes = read_optional_tsv(f"{results}/facets/{cid}/annotation/annotated_genes.tsv")
+            pp = read_purity_ploidy(results, cid)
+            rows.append(summary_row(comparison, "facets", segments, genes, pp["purity"], pp["ploidy"]))
+    return rows
+
+
+def summary_row(comparison, caller, segments, genes, purity, ploidy):
+    """Summarize CNV calls for one comparison/caller."""
+    return {
+        "comparison_id": comparison["comparison_id"],
+        "patient_id": comparison["patient_id"],
+        "species": comparison["species"],
+        "comparison_type": comparison["comparison_type"],
+        "caller": caller,
+        "n_segments": len(segments),
+        "n_gain": count_value(segments, "cnv_call", "gain"),
+        "n_loss": count_value(segments, "cnv_call", "loss"),
+        "n_amplification": count_value(segments, "cnv_call", "amplification"),
+        "n_deep_deletion": count_value(segments, "cnv_call", "deep_deletion"),
+        "n_homozygous_deletion": count_value(segments, "cnv_call", "homozygous_deletion"),
+        "n_loh_segments": count_value(segments, "loh_status", "LOH"),
+        "n_focal_segments": count_value(segments, "event_size", "focal"),
+        "n_broad_segments": count_value(segments, "event_size", "broad"),
+        "n_affected_genes": unique_gene_count(genes),
+        "purity": purity,
+        "ploidy": ploidy,
+    }
+
+
+def purity_ploidy_rows(comparisons, results):
+    """Build one purity/ploidy row per comparison, blank when unavailable."""
+    rows = []
+    for comparison in comparisons.to_dict(orient="records"):
+        pp = read_purity_ploidy(results, comparison["comparison_id"])
+        rows.append(
+            {
+                "comparison_id": comparison["comparison_id"],
+                "patient_id": comparison["patient_id"],
+                "comparison_type": comparison["comparison_type"],
+                "purity": pp["purity"],
+                "ploidy": pp["ploidy"],
+            }
+        )
+    return rows
 
 
 def main():
@@ -107,8 +162,8 @@ def main():
     parser.add_argument("--comparisons", required=True)
     parser.add_argument("--results", required=True)
     parser.add_argument("--out-qc", required=True)
-    parser.add_argument("--out-segments", required=True)
-    parser.add_argument("--out-genes", required=True)
+    parser.add_argument("--out-cnv-summary", required=True)
+    parser.add_argument("--out-purity-ploidy", required=True)
     args = parser.parse_args()
 
     samples = read_tsv(args.samples)
@@ -117,11 +172,11 @@ def main():
     pd.DataFrame(comparison_qc_rows(samples, comparisons, args.results)).to_csv(
         args.out_qc, sep="\t", index=False
     )
-    merged_annotation_rows(comparisons, args.results, "segments").to_csv(
-        args.out_segments, sep="\t", index=False
+    pd.DataFrame(cnv_summary_rows(comparisons, args.results)).to_csv(
+        args.out_cnv_summary, sep="\t", index=False
     )
-    merged_annotation_rows(comparisons, args.results, "genes").to_csv(
-        args.out_genes, sep="\t", index=False
+    pd.DataFrame(purity_ploidy_rows(comparisons, args.results)).to_csv(
+        args.out_purity_ploidy, sep="\t", index=False
     )
 
 

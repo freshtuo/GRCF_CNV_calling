@@ -394,16 +394,17 @@ facets/{comparison_id}/annotation/annotated_genes.tsv
 
 `summarize_results` merges:
 
-- CNVkit annotated segments and genes
-- FACETS annotated segments and genes
+- CNVkit annotated segment/gene counts
+- FACETS annotated segment/gene counts
+- FACETS purity/ploidy when available
 - comparison-scoped QC outputs
 
 It writes:
 
 ```text
-results/{project}/summary/all_comparisons.segments.tsv
-results/{project}/summary/all_comparisons.genes.tsv
 results/{project}/summary/all_comparisons.qc.tsv
+results/{project}/summary/all_comparisons.cnv_summary.tsv
+results/{project}/summary/all_comparisons.purity_ploidy.tsv
 ```
 
 `make_report` creates:
