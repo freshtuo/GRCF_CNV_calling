@@ -1,0 +1,5 @@
+// Snakemake's built-in file-level DAG generation failed in this environment:
+// AttributeError: 'NoneType' object has no attribute 'ignore_incomplete'
+//
+// See docs/pipeline_overview.md for the exact command and error context.
+// See docs/workflow_rulegraph.dot for a rendered rule-level DAG.

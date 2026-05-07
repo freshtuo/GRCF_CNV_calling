@@ -1,0 +1,73 @@
+digraph snakemake_rulegraph {
+    graph [
+        rankdir = TB,
+        fontsize = 18,
+        labelloc = "t",
+        label = "GRCF_CNV_calling rule-level DAG"
+    ];
+
+    node [
+        shape = box,
+        style = "rounded,filled",
+        color = "#4a5568",
+        fillcolor = "#f7fafc",
+        fontname = "Helvetica",
+        fontsize = 12
+    ];
+
+    edge [
+        color = "#4a5568",
+        arrowsize = 0.8
+    ];
+
+    metadata [label = "config.yaml\nsamples.tsv\ncomparisons.tsv", shape = folder, fillcolor = "#fff7ed"];
+    validate_metadata [label = "validate_metadata\nmetadata/validated.ok", fillcolor = "#fef3c7"];
+
+    samtools_quickcheck [label = "samtools_quickcheck\nper sample"];
+    samtools_flagstat [label = "samtools_flagstat\nper sample"];
+    samtools_idxstats [label = "samtools_idxstats\nper sample"];
+
+    cnvkit_batch [label = "cnvkit_batch\nper run_cnvkit comparison"];
+    cnvkit_call [label = "cnvkit_call"];
+    cnvkit_scatter [label = "cnvkit_scatter"];
+    cnvkit_diagram [label = "cnvkit_diagram"];
+    annotate_cnvkit [label = "annotate_cnvkit\nannotated_segments.tsv\nannotated_genes.tsv", fillcolor = "#dcfce7"];
+
+    facets [label = "facets\nper run_facets comparison"];
+    annotate_facets [label = "annotate_facets\nfacets_annotated_*.tsv", fillcolor = "#dbeafe"];
+
+    summarize_results [label = "summarize_results\nsummary TSVs", fillcolor = "#ede9fe"];
+    make_report [label = "make_report\nsummary/report.html", fillcolor = "#ede9fe"];
+    all [label = "all", shape = doublecircle, fillcolor = "#f8fafc"];
+
+    metadata -> validate_metadata;
+
+    validate_metadata -> samtools_quickcheck;
+    validate_metadata -> samtools_flagstat;
+    validate_metadata -> samtools_idxstats;
+
+    validate_metadata -> cnvkit_batch;
+    cnvkit_batch -> cnvkit_call;
+    cnvkit_batch -> cnvkit_scatter;
+    cnvkit_batch -> cnvkit_diagram;
+    cnvkit_call -> annotate_cnvkit;
+    cnvkit_scatter -> annotate_cnvkit;
+    cnvkit_diagram -> annotate_cnvkit;
+
+    validate_metadata -> facets;
+    facets -> annotate_facets;
+
+    annotate_cnvkit -> summarize_results;
+    annotate_facets -> summarize_results;
+    samtools_flagstat -> summarize_results;
+    summarize_results -> make_report;
+
+    validate_metadata -> all;
+    samtools_quickcheck -> all;
+    samtools_flagstat -> all;
+    samtools_idxstats -> all;
+    annotate_cnvkit -> all;
+    facets -> all;
+    summarize_results -> all;
+    make_report -> all;
+}
