@@ -121,6 +121,11 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
     if genes.empty:
         return "<p>No gene rows.</p>"
 
+    genes = genes.loc[genes["chromosome"].astype(str).str.lower() != "chry"].copy()
+    genes = genes.loc[genes["chromosome"].astype(str).str.upper() != "Y"].copy()
+    if genes.empty:
+        return "<p>No non-chrY gene rows.</p>"
+
     high_overlap = genes.loc[genes["_overlap"] >= min_overlap].copy()
     if high_overlap.empty:
         return f"<p>No gene rows with gene_overlap_fraction >= {min_overlap}.</p>"
@@ -157,7 +162,8 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
     sections.append(("Top LOH", loh))
 
     html_parts = [
-        f"<p>Showing up to {top_n} genes per category with gene_overlap_fraction >= {min_overlap}.</p>"
+        f"<p>Showing up to {top_n} non-chrY genes per category with "
+        f"gene_overlap_fraction >= {min_overlap}.</p>"
     ]
     for title, frame in sections:
         html_parts.append(f"<h3>{escape(title)}</h3>")
