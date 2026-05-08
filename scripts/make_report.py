@@ -19,7 +19,7 @@ def yes(value):
     return str(value).strip().lower() in {"yes", "true", "1", "y"}
 
 
-def html_table(frame, max_rows=50):
+def html_table(frame, max_rows=50, show_note=True):
     """Render a compact HTML table for a dataframe."""
     if frame.empty:
         return "<p>No rows.</p>"
@@ -30,14 +30,20 @@ def html_table(frame, max_rows=50):
         cells = "".join(f"<td>{escape(str(value))}</td>" for value in row.values())
         body_rows.append(f"<tr>{cells}</tr>")
     note = ""
-    if len(frame) > max_rows:
+    if show_note and len(frame) > max_rows:
         note = f"<p>Showing first {max_rows} of {len(frame)} rows.</p>"
     return f"{note}<table><thead><tr>{headers}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
 
 
 def scroll_table(frame, max_rows=50):
     """Render a table inside a scrollable container."""
-    return f"<div class=\"table-scroll\">{html_table(frame, max_rows=max_rows)}</div>"
+    if frame.empty:
+        return html_table(frame, max_rows=max_rows)
+    note = ""
+    if len(frame) > max_rows:
+        note = f"<p>Showing first {max_rows} of {len(frame)} rows.</p>"
+    table = html_table(frame, max_rows=max_rows, show_note=False)
+    return f"{note}<div class=\"table-scroll\">{table}</div>"
 
 
 def to_numeric(frame, column):
@@ -253,7 +259,7 @@ def write_comparison_report(
     th, td {{ border: 1px solid #ccc; padding: 0.35rem 0.55rem; text-align: left; vertical-align: top; }}
     th {{ background: #f5f5f5; }}
     .meta p {{ margin: 0.2rem 0; }}
-    .table-scroll {{ max-height: 28rem; overflow: auto; border: 1px solid #ddd; margin-top: 0.8rem; }}
+    .table-scroll {{ display: inline-block; max-width: 100%; max-height: 28rem; overflow: auto; border: 1px solid #ddd; margin-top: 0.3rem; }}
     .table-scroll table {{ margin-top: 0; }}
     .table-scroll th {{ position: sticky; top: 0; z-index: 1; }}
   </style>
