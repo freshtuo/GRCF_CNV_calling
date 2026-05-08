@@ -56,7 +56,9 @@ rule make_report:
         project=PROJECT,
         comparisons=COMPARISONS_TSV,
         results_dir=lambda wildcards, output: str(Path(output.index).parents[1]),
-        reports_dir=lambda wildcards, output: str(Path(output.index).parent / "reports")
+        reports_dir=lambda wildcards, output: str(Path(output.index).parent / "reports"),
+        top_genes_per_category=lambda wildcards: config.get("report", {}).get("top_genes_per_category", 20),
+        min_gene_overlap_fraction=lambda wildcards: config.get("report", {}).get("min_gene_overlap_fraction", 0.8)
     conda:
         "../../envs/annotation.yaml"
     shell:
@@ -69,4 +71,6 @@ rule make_report:
         "--purity-ploidy {input.purity_ploidy} "
         "--results-dir {params.results_dir} "
         "--reports-dir {params.reports_dir} "
+        "--top-genes-per-category {params.top_genes_per_category} "
+        "--min-gene-overlap-fraction {params.min_gene_overlap_fraction} "
         "--output {output.index} > {log} 2>&1"

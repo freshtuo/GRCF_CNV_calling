@@ -175,7 +175,7 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
     return "".join(html_parts)
 
 
-def caller_gene_highlights(genes, purity_ploidy):
+def caller_gene_highlights(genes, purity_ploidy, min_overlap=0.8, top_n=20):
     """Render ranked gene highlights separately for each caller."""
     if genes.empty:
         return "<p>No gene rows.</p>"
@@ -195,11 +195,20 @@ def caller_gene_highlights(genes, purity_ploidy):
                     "<p><strong>Note:</strong> FACETS purity was not estimated for this comparison; "
                     "allele-specific CN and LOH highlights should be interpreted cautiously.</p>"
                 )
-        html_parts.append(ranked_gene_sections(caller_rows))
+        html_parts.append(ranked_gene_sections(caller_rows, min_overlap=min_overlap, top_n=top_n))
     return "".join(html_parts) if html_parts else "<p>No gene rows.</p>"
 
 
-def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_ploidy, results_dir):
+def write_comparison_report(
+    report_path,
+    comparison,
+    qc,
+    cnv_summary,
+    purity_ploidy,
+    results_dir,
+    min_gene_overlap_fraction,
+    top_genes_per_category,
+):
     """Write one detailed HTML report for a comparison."""
     cid = comparison["comparison_id"]
     qc_frame = qc.loc[qc["comparison_id"] == cid].copy() if not qc.empty else pd.DataFrame()
@@ -261,7 +270,7 @@ def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_plo
   <h2>CNV Summary</h2>
   {html_table(summary_frame)}
   <h2>Ranked Gene Highlights</h2>
-  {caller_gene_highlights(genes_frame, pp_frame)}
+  {caller_gene_highlights(genes_frame, pp_frame, min_gene_overlap_fraction, top_genes_per_category)}
   <h2>Detailed Files</h2>
   <p>Detailed file links are relative to this report. Copy the full project result directory to preserve them.</p>
   {detail_section}
@@ -281,6 +290,8 @@ def main():
     parser.add_argument("--purity-ploidy", required=True)
     parser.add_argument("--results-dir", required=True)
     parser.add_argument("--reports-dir", required=True)
+    parser.add_argument("--top-genes-per-category", type=int, default=20)
+    parser.add_argument("--min-gene-overlap-fraction", type=float, default=0.8)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -302,6 +313,8 @@ def main():
             cnv_summary,
             purity_ploidy,
             args.results_dir,
+            args.min_gene_overlap_fraction,
+            args.top_genes_per_category,
         )
         rows = cnv_summary.loc[cnv_summary["comparison_id"] == cid] if not cnv_summary.empty else pd.DataFrame()
         callers = ",".join(rows["caller"].tolist()) if not rows.empty and "caller" in rows.columns else ""

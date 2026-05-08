@@ -26,9 +26,11 @@ summary/reports/<comparison_id>.report.html
 
 Per-comparison HTML report with QC, purity/ploidy when available, CNV summary,
 ranked high-overlap gene highlights, and links to detailed caller outputs.
-Ranked gene highlights are shown separately for CNVkit and FACETS. Each caller
-section shows up to 10 genes per category for gains, losses/deletions, and LOH,
-requiring `gene_overlap_fraction >= 0.8`.
+Ranked gene highlights are shown separately for CNVkit and FACETS. By default,
+each caller section shows up to 20 genes per category for gains,
+losses/deletions, and LOH, requiring `gene_overlap_fraction >= 0.8`.
+These values are controlled by `report.top_genes_per_category` and
+`report.min_gene_overlap_fraction` in `config/config.yaml`.
 Chromosome Y genes are excluded from these ranked highlights to reduce
 sex-chromosome artifacts in samples without chrY. Low-priority non-coding or
 predicted gene prefixes (`LOC`, `MIR`, `LINC`, `SNOR`, `SNORD`, `SNORA`, `RNU`,

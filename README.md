@@ -59,6 +59,9 @@ Edit `config/config.yaml` and replace the placeholder paths:
 For WGS CNVkit runs, `cnvkit.target_avg_size` controls the bin size passed to
 `--target-avg-size`. Set it to blank/null to use CNVkit's automatic bin sizing.
 
+Report gene highlights are controlled by `report.top_genes_per_category` and
+`report.min_gene_overlap_fraction`.
+
 Then replace example BAM/BAI paths in `config/samples.tsv`.
 
 ## Run
