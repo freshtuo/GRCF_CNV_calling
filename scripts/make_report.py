@@ -117,7 +117,7 @@ def display_gene_columns(frame):
 
 
 def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
-    """Render ranked high-overlap gain/loss/LOH gene previews."""
+    """Render ranked high-overlap gain/loss/LOH gene previews for one caller."""
     if genes.empty:
         return "<p>No gene rows.</p>"
 
@@ -173,6 +173,30 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
         html_parts.append(f"<h3>{escape(title)}</h3>")
         html_parts.append(html_table(display_gene_columns(frame), max_rows=top_n))
     return "".join(html_parts)
+
+
+def caller_gene_highlights(genes, purity_ploidy):
+    """Render ranked gene highlights separately for each caller."""
+    if genes.empty:
+        return "<p>No gene rows.</p>"
+
+    html_parts = []
+    for caller in ("cnvkit", "facets"):
+        caller_rows = genes.loc[genes["caller"] == caller].copy()
+        if caller_rows.empty:
+            continue
+        html_parts.append(f"<h3>{escape(caller.upper())}</h3>")
+        if caller == "facets":
+            status = ""
+            if not purity_ploidy.empty and "purity_status" in purity_ploidy.columns:
+                status = str(purity_ploidy.iloc[0].get("purity_status", ""))
+            if status and status != "estimated":
+                html_parts.append(
+                    "<p><strong>Note:</strong> FACETS purity was not estimated for this comparison; "
+                    "allele-specific CN and LOH highlights should be interpreted cautiously.</p>"
+                )
+        html_parts.append(ranked_gene_sections(caller_rows))
+    return "".join(html_parts) if html_parts else "<p>No gene rows.</p>"
 
 
 def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_ploidy, results_dir):
@@ -237,7 +261,7 @@ def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_plo
   <h2>CNV Summary</h2>
   {html_table(summary_frame)}
   <h2>Ranked Gene Highlights</h2>
-  {ranked_gene_sections(genes_frame)}
+  {caller_gene_highlights(genes_frame, pp_frame)}
   <h2>Detailed Files</h2>
   <p>Detailed file links are relative to this report. Copy the full project result directory to preserve them.</p>
   {detail_section}
