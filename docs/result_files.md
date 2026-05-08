@@ -339,6 +339,14 @@ The gene-level tables contain one row per retained gene-segment overlap after
 annotation filtering. A gene can appear more than once if it overlaps multiple
 segments.
 
+`annotated_genes.tsv` can have different row counts across comparisons. "All
+genes" means all genes that overlap retained segments for that comparison, not
+every gene in the reference genome exactly once. Row counts differ because each
+comparison can have different segment boundaries, omitted/problematic regions,
+caller-specific segmentation, and duplicate rows for genes that overlap multiple
+segments. For a unique-gene count, count distinct `gene_name` values rather than
+total rows.
+
 Common columns:
 
 ```text

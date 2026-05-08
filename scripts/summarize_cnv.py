@@ -51,7 +51,7 @@ def comparison_qc_rows(samples, comparisons, results):
                     "sample_id": sample_id,
                     "species": sample.get("species", ""),
                     "sample_type": sample.get("sample_type", ""),
-                    "bam": sample.get("bam", ""),
+                    "bam_name": Path(sample.get("bam", "")).name,
                     **flagstat,
                     "quickcheck_status": status,
                 }
