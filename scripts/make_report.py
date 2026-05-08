@@ -123,8 +123,11 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
 
     genes = genes.loc[genes["chromosome"].astype(str).str.lower() != "chry"].copy()
     genes = genes.loc[genes["chromosome"].astype(str).str.upper() != "Y"].copy()
+    low_priority_prefixes = ("LOC", "MIR", "LINC", "SNOR", "SNORD", "SNORA", "RNU", "RNA5S")
+    gene_names = genes["gene_name"].fillna("").astype(str).str.upper()
+    genes = genes.loc[~gene_names.str.startswith(low_priority_prefixes)].copy()
     if genes.empty:
-        return "<p>No non-chrY gene rows.</p>"
+        return "<p>No report-priority gene rows after display filters.</p>"
 
     high_overlap = genes.loc[genes["_overlap"] >= min_overlap].copy()
     if high_overlap.empty:
@@ -162,8 +165,9 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
     sections.append(("Top LOH", loh))
 
     html_parts = [
-        f"<p>Showing up to {top_n} non-chrY genes per category with "
-        f"gene_overlap_fraction >= {min_overlap}.</p>"
+        f"<p>Showing up to {top_n} report-priority genes per category with "
+        f"gene_overlap_fraction >= {min_overlap}. chrY and low-priority "
+        "non-coding/predicted gene prefixes are hidden from highlights only.</p>"
     ]
     for title, frame in sections:
         html_parts.append(f"<h3>{escape(title)}</h3>")

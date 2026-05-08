@@ -29,8 +29,10 @@ ranked high-overlap gene highlights, and links to detailed caller outputs.
 Ranked gene highlights show up to 10 genes per category for gains,
 losses/deletions, and LOH, requiring `gene_overlap_fraction >= 0.8`.
 Chromosome Y genes are excluded from these ranked highlights to reduce
-sex-chromosome artifacts in samples without chrY, but chrY rows remain in the
-detailed annotation TSVs.
+sex-chromosome artifacts in samples without chrY. Low-priority non-coding or
+predicted gene prefixes (`LOC`, `MIR`, `LINC`, `SNOR`, `SNORD`, `SNORA`, `RNU`,
+`RNA5S`) are also hidden from ranked highlights. These are display filters only;
+all rows remain in the detailed annotation TSVs.
 
 Note: HTML links are relative to the result folder layout. Links should keep
 working if the whole `results/<project>/` directory is copied while preserving
