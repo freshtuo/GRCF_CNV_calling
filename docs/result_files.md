@@ -498,3 +498,97 @@ Recommended review flow:
 5. Use `annotation/annotated_segments.tsv` as the primary evidence table.
 6. Use `annotation/annotated_genes.tsv` to search and prioritize genes.
 7. Confirm important calls with CNVkit/FACETS plots.
+
+## Rerunning Part Of The Workflow
+
+Use `--rerun-triggers mtime` for targeted reruns when you only want Snakemake to
+consider file timestamps. This avoids rerunning upstream CNV callers just
+because rule code or parameters changed during report/annotation development.
+
+Preview any targeted rerun first:
+
+```bash
+snakemake make_report --use-conda --cores 8 --rerun-triggers mtime -n -p
+```
+
+Regenerate only the HTML reports after report-layout or display-only changes:
+
+```bash
+snakemake make_report --use-conda --cores 8 --rerun-triggers mtime -R make_report
+```
+
+Regenerate merged summary tables and HTML reports after changes to
+`scripts/summarize_cnv.py` or report inputs:
+
+```bash
+snakemake summarize_results make_report --use-conda --cores 8 --rerun-triggers mtime -R summarize_results make_report
+```
+
+Regenerate CNV annotations, summaries, and reports after changes to
+`scripts/annotate_segments.py` or gene-overlap annotation settings:
+
+```bash
+snakemake annotate_cnvkit annotate_facets summarize_results make_report --use-conda --cores 8 --rerun-triggers mtime -R annotate_cnvkit annotate_facets summarize_results make_report
+```
+
+Do not force CNVkit or FACETS caller rules unless caller inputs or caller
+parameters changed and you intentionally want to recalculate copy-number calls.
+
+## Maintenance And Cleanup
+
+Maintenance targets are optional and are not part of the default workflow.
+
+Standard cleanup:
+
+```bash
+snakemake standard_cleanup --use-conda --cores 8 --rerun-triggers mtime
+```
+
+This removes disposable intermediates that are not used by downstream
+annotation or reports:
+
+```text
+facets/<comparison_id>/pileup/
+cnvkit/<comparison_id>/batch_tmp.*
+```
+
+FACETS pileups are regenerated if the FACETS rule is rerun. CNVkit `batch_tmp.*`
+directories are temporary work directories and are only expected to remain after
+failed or interrupted jobs.
+
+Standard cleanup also gzips large CNVkit-native files inside:
+
+```text
+cnvkit/<comparison_id>/batch_outputs/
+```
+
+Compression uses `pigz` when it is available for parallel gzip-compatible
+compression, controlled by `maintenance.gzip_threads` in `config/config.yaml`
+(default: 4 threads per comparison). If `pigz` is not available, the workflow
+falls back to standard single-threaded `gzip`.
+
+The canonical user-facing files in `cnr/`, `cns/`, `calls/`, `annotation/`, and
+`plots/` are left unchanged.
+
+Advanced lower-level targets are also available:
+
+```bash
+snakemake cleanup_intermediates --use-conda --cores 8 --rerun-triggers mtime
+snakemake gzip_cnvkit_batch_outputs --use-conda --cores 8 --rerun-triggers mtime
+```
+
+Deep cleanup:
+
+```bash
+snakemake deep_cleanup --use-conda --cores 8 --rerun-triggers mtime
+```
+
+This runs the disposable-file cleanup and also removes:
+
+```text
+cnvkit/<comparison_id>/batch_outputs/
+```
+
+Use deep cleanup only after final review, when CNVkit-native intermediate/debug
+files such as `reference.cnn`, `*.targetcoverage.cnn`, native `*.cnr`, native
+`*.cns`, and `*.bintest.cns` are no longer needed.
