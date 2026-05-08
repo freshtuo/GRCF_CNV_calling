@@ -302,20 +302,18 @@ def build_segment_output(segments, overlaps):
 
 
 def build_gene_output(segments, overlaps):
-    """Write one compact row per affected gene."""
+    """Write one row per retained gene-segment overlap, including neutral genes."""
     if overlaps.empty:
         return pd.DataFrame(columns=GENE_FIELDS)
 
     overlap_columns = overlaps.drop(columns=["segment_chromosome", "segment_start", "segment_end"])
     gene_rows = overlap_columns.merge(segments, on="segment_id", how="left")
-    gene_rows = gene_rows.loc[~gene_rows["cnv_call"].isin(["neutral", "unknown"])].copy()
     if gene_rows.empty:
         return pd.DataFrame(columns=GENE_FIELDS)
     gene_rows = gene_rows.sort_values(
-        ["gene_name", "gene_overlap_fraction", "gene_overlap_bp", "segment_length"],
-        ascending=[True, False, False, False],
+        ["gene_name", "chromosome", "segment_start", "gene_overlap_fraction", "gene_overlap_bp"],
+        ascending=[True, True, True, False, False],
     )
-    gene_rows = gene_rows.drop_duplicates(subset=["gene_name"], keep="first")
     return gene_rows[
         BASE_FIELDS
         + [

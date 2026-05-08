@@ -25,7 +25,9 @@ summary/reports/<comparison_id>.report.html
 ```
 
 Per-comparison HTML report with QC, purity/ploidy when available, CNV summary,
-affected-gene preview, and links to detailed caller outputs.
+ranked high-overlap gene highlights, and links to detailed caller outputs.
+Ranked gene highlights show up to 10 genes per category for gains,
+losses/deletions, and LOH, requiring `gene_overlap_fraction >= 0.8`.
 
 Note: HTML links are relative to the result folder layout. Links should keep
 working if the whole `results/<project>/` directory is copied while preserving
@@ -46,13 +48,15 @@ cnvkit/<comparison_id>/annotation/annotated_genes.tsv
 facets/<comparison_id>/annotation/annotated_genes.tsv
 ```
 
-Gene-indexed view of segment calls. A gene row means the gene overlaps a CNV/LOH
-segment and inherits that segment's call. This is useful for searching genes of
-interest, but it is not an independent gene-resolution call.
+Gene-indexed view of segment calls. A gene row means the gene overlaps a segment
+and inherits that segment's CNV/LOH call. Neutral genes are included, so use
+`cnv_call` and `loh_status` to distinguish altered genes from copy-neutral
+overlaps. This file is useful for searching genes of interest, but it is not an
+independent gene-resolution call.
 
-Current behavior: the gene-level file reports affected genes only, excluding
-neutral and unknown segments. A planned update is to include all overlapping
-genes and use `cnv_call` to distinguish neutral from altered genes.
+Summary fields named `n_affected_genes` count only genes with non-neutral
+`cnv_call` or `loh_status == LOH`; neutral rows in `annotated_genes.tsv` are not
+counted as affected.
 
 ## CNVkit Outputs
 
@@ -331,8 +335,9 @@ Collapsed gene overlap summary for the segment.
 
 ## Annotated Gene Columns
 
-The gene-level tables contain one row per reported gene-segment overlap after
-annotation filtering.
+The gene-level tables contain one row per retained gene-segment overlap after
+annotation filtering. A gene can appear more than once if it overlaps multiple
+segments.
 
 Common columns:
 
@@ -474,4 +479,3 @@ Recommended review flow:
 5. Use `annotation/annotated_segments.tsv` as the primary evidence table.
 6. Use `annotation/annotated_genes.tsv` to search and prioritize genes.
 7. Confirm important calls with CNVkit/FACETS plots.
-

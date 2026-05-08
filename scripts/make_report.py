@@ -35,6 +35,13 @@ def html_table(frame, max_rows=50):
     return f"{note}<table><thead><tr>{headers}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
 
 
+def to_numeric(frame, column):
+    """Return a numeric series, using NA values when the column is absent."""
+    if column not in frame.columns:
+        return pd.Series(pd.NA, index=frame.index, dtype="Float64")
+    return pd.to_numeric(frame[column], errors="coerce")
+
+
 def read_optional_tsv(path):
     """Read a TSV file if it exists."""
     if not Path(path).exists():
@@ -66,8 +73,8 @@ def detail_links(results_dir, comparison, caller):
     )
 
 
-def top_genes(results_dir, comparison):
-    """Collect top affected-gene rows from each enabled caller."""
+def collect_gene_rows(results_dir, comparison):
+    """Collect gene rows from each enabled caller."""
     frames = []
     cid = comparison["comparison_id"]
     for caller in ("cnvkit", "facets"):
@@ -81,19 +88,81 @@ def top_genes(results_dir, comparison):
     if not frames:
         return pd.DataFrame()
     frame = pd.concat(frames, ignore_index=True, sort=False)
+    frame["_overlap"] = to_numeric(frame, "gene_overlap_fraction").fillna(0)
+    frame["_log2"] = to_numeric(frame, "log2_ratio")
+    frame["_total_cn"] = to_numeric(frame, "total_cn")
+    frame["_minor_cn"] = to_numeric(frame, "minor_cn")
+    return frame
+
+
+def display_gene_columns(frame):
+    """Return report-facing gene columns in a stable order."""
     preferred = [
         "caller",
         "gene_name",
         "cnv_call",
         "loh_status",
+        "log2_ratio",
+        "total_cn",
+        "minor_cn",
         "event_size",
         "chromosome",
         "segment_start",
         "segment_end",
         "gene_overlap_fraction",
+        "gene_overlap_type",
     ]
     columns = [column for column in preferred if column in frame.columns]
     return frame[columns]
+
+
+def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
+    """Render ranked high-overlap gain/loss/LOH gene previews."""
+    if genes.empty:
+        return "<p>No gene rows.</p>"
+
+    high_overlap = genes.loc[genes["_overlap"] >= min_overlap].copy()
+    if high_overlap.empty:
+        return f"<p>No gene rows with gene_overlap_fraction >= {min_overlap}.</p>"
+
+    sections = []
+
+    gains = high_overlap.loc[high_overlap["cnv_call"].isin(["gain", "amplification"])].copy()
+    if not gains.empty:
+        gains = gains.sort_values(
+            ["_total_cn", "_log2", "_overlap"],
+            ascending=[False, False, False],
+            na_position="last",
+        )
+    sections.append(("Top Gains And Amplifications", gains))
+
+    losses = high_overlap.loc[
+        high_overlap["cnv_call"].isin(["loss", "deep_deletion", "homozygous_deletion"])
+    ].copy()
+    if not losses.empty:
+        losses = losses.sort_values(
+            ["_total_cn", "_log2", "_overlap"],
+            ascending=[True, True, False],
+            na_position="last",
+        )
+    sections.append(("Top Losses And Deletions", losses))
+
+    loh = high_overlap.loc[high_overlap["loh_status"] == "LOH"].copy()
+    if not loh.empty:
+        loh = loh.sort_values(
+            ["_minor_cn", "_total_cn", "_log2", "_overlap"],
+            ascending=[True, True, True, False],
+            na_position="last",
+        )
+    sections.append(("Top LOH", loh))
+
+    html_parts = [
+        f"<p>Showing up to {top_n} genes per category with gene_overlap_fraction >= {min_overlap}.</p>"
+    ]
+    for title, frame in sections:
+        html_parts.append(f"<h3>{escape(title)}</h3>")
+        html_parts.append(html_table(display_gene_columns(frame), max_rows=top_n))
+    return "".join(html_parts)
 
 
 def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_ploidy, results_dir):
@@ -110,7 +179,7 @@ def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_plo
         if not purity_ploidy.empty
         else pd.DataFrame()
     )
-    genes_frame = top_genes(results_dir, comparison)
+    genes_frame = collect_gene_rows(results_dir, comparison)
     control = comparison.get("control_id", "").strip() or "none"
     caution = ""
     if comparison.get("comparison_type", "") == "tumor_only" or not comparison.get("control_id", "").strip():
@@ -157,9 +226,10 @@ def write_comparison_report(report_path, comparison, qc, cnv_summary, purity_plo
   {html_table(pp_frame)}
   <h2>CNV Summary</h2>
   {html_table(summary_frame)}
-  <h2>Top Affected Genes</h2>
-  {html_table(genes_frame)}
+  <h2>Ranked Gene Highlights</h2>
+  {ranked_gene_sections(genes_frame)}
   <h2>Detailed Files</h2>
+  <p>Detailed file links are relative to this report. Copy the full project result directory to preserve them.</p>
   {detail_section}
 </body>
 </html>

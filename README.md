@@ -56,6 +56,9 @@ Edit `config/config.yaml` and replace the placeholder paths:
 - `resources.<species>.genes_bed`
 - `resources.human.common_snps_vcf` if any comparison has `run_facets=yes`
 
+For WGS CNVkit runs, `cnvkit.target_avg_size` controls the bin size passed to
+`--target-avg-size`. Set it to blank/null to use CNVkit's automatic bin sizing.
+
 Then replace example BAM/BAI paths in `config/samples.tsv`.
 
 ## Run

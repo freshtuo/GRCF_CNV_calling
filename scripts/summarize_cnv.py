@@ -76,12 +76,18 @@ def count_value(frame, column, value):
     return int((frame[column] == value).sum())
 
 
-def unique_gene_count(frame):
-    """Count unique non-empty genes in an affected-gene table."""
+def affected_gene_count(frame):
+    """Count unique genes with non-neutral CNV calls or LOH."""
     if frame.empty or "gene_name" not in frame.columns:
         return 0
     genes = frame["gene_name"].fillna("").astype(str)
-    return int(genes.loc[(genes != "") & (genes != ".")].nunique())
+    affected = pd.Series(False, index=frame.index)
+    if "cnv_call" in frame.columns:
+        affected |= ~frame["cnv_call"].fillna("").isin(["", "neutral", "unknown"])
+    if "loh_status" in frame.columns:
+        affected |= frame["loh_status"].fillna("") == "LOH"
+    genes = genes.loc[affected & (genes != "") & (genes != ".")]
+    return int(genes.nunique())
 
 
 def purity_ploidy_path(results, comparison_id):
@@ -93,9 +99,12 @@ def read_purity_ploidy(results, comparison_id):
     """Read FACETS purity/ploidy values if available."""
     frame = read_optional_tsv(purity_ploidy_path(results, comparison_id))
     if frame.empty:
-        return {"purity": "", "ploidy": ""}
+        return {"purity": "", "ploidy": "", "purity_status": "not_available"}
     row = frame.iloc[0].to_dict()
-    return {"purity": row.get("purity", ""), "ploidy": row.get("ploidy", "")}
+    purity = row.get("purity", "")
+    ploidy = row.get("ploidy", "")
+    status = "estimated" if str(purity).strip() else "not_estimated"
+    return {"purity": purity, "ploidy": ploidy, "purity_status": status}
 
 
 def cnv_summary_rows(comparisons, results):
@@ -111,11 +120,21 @@ def cnv_summary_rows(comparisons, results):
             segments = read_optional_tsv(f"{results}/facets/{cid}/annotation/annotated_segments.tsv")
             genes = read_optional_tsv(f"{results}/facets/{cid}/annotation/annotated_genes.tsv")
             pp = read_purity_ploidy(results, cid)
-            rows.append(summary_row(comparison, "facets", segments, genes, pp["purity"], pp["ploidy"]))
+            rows.append(
+                summary_row(
+                    comparison,
+                    "facets",
+                    segments,
+                    genes,
+                    pp["purity"],
+                    pp["ploidy"],
+                    pp["purity_status"],
+                )
+            )
     return rows
 
 
-def summary_row(comparison, caller, segments, genes, purity, ploidy):
+def summary_row(comparison, caller, segments, genes, purity, ploidy, purity_status=""):
     """Summarize CNV calls for one comparison/caller."""
     return {
         "comparison_id": comparison["comparison_id"],
@@ -132,9 +151,10 @@ def summary_row(comparison, caller, segments, genes, purity, ploidy):
         "n_loh_segments": count_value(segments, "loh_status", "LOH"),
         "n_focal_segments": count_value(segments, "event_size", "focal"),
         "n_broad_segments": count_value(segments, "event_size", "broad"),
-        "n_affected_genes": unique_gene_count(genes),
+        "n_affected_genes": affected_gene_count(genes),
         "purity": purity,
         "ploidy": ploidy,
+        "purity_status": purity_status,
     }
 
 
@@ -150,6 +170,7 @@ def purity_ploidy_rows(comparisons, results):
                 "comparison_type": comparison["comparison_type"],
                 "purity": pp["purity"],
                 "ploidy": pp["ploidy"],
+                "purity_status": pp["purity_status"],
             }
         )
     return rows

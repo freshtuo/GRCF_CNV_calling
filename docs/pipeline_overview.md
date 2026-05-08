@@ -215,6 +215,7 @@ cnvkit.py batch case.bam [--normal control.bam | --normal] \
     --method wgs \
     --fasta reference.fa \
     --access access.bed \
+    [--target-avg-size configured_bin_size] \
     --output-dir workdir
 ```
 
@@ -226,6 +227,10 @@ resources:
     fasta: ...
     access_bed: ...
 ```
+
+For WGS, `cnvkit.target_avg_size` can be set in `config/config.yaml` to keep
+bin size consistent across samples and avoid very small auto-sized bins in
+high-depth data. Set it to blank/null to let CNVkit auto-size bins from depth.
 
 CNVkit names output files from BAM basenames, so the rule copies the discovered `.cnr` and `.cns` files into stable comparison-based names:
 
@@ -382,7 +387,11 @@ event_size:
   broad_mb: 10
 ```
 
-The script overlaps each segment with `genes_bed` and writes:
+The script overlaps each segment with `genes_bed` and writes all retained
+gene-segment overlaps to the gene table. Neutral genes are kept; affected-gene
+counts and report highlights filter by `cnv_call` and `loh_status`.
+
+It writes:
 
 ```text
 cnvkit/{comparison_id}/annotation/annotated_segments.tsv

@@ -18,6 +18,7 @@ rule cnvkit_batch:
         fasta=lambda wildcards: species_resource(wildcards.comparison_id, "fasta"),
         access=lambda wildcards: species_resource(wildcards.comparison_id, "access_bed"),
         annotate=lambda wildcards: species_resource(wildcards.comparison_id, "cnvkit_annotate"),
+        target_avg_size=lambda wildcards: f"--target-avg-size {config.get('cnvkit', {}).get('target_avg_size')}" if config.get("cnvkit", {}).get("target_avg_size") else "",
         outdir=lambda wildcards, output: str(Path(output.cnr).parents[1]),
         batch_dir=lambda wildcards, output: str(Path(output.cnr).parents[1] / "batch_outputs"),
         case_prefix=lambda wildcards: Path(sample_bam(comparison_case_id(wildcards.comparison_id))).stem
@@ -30,6 +31,7 @@ rule cnvkit_batch:
         set -euo pipefail
         # Keep the public result layout stable while allowing CNVkit to write
         # its native filenames inside a temporary working directory.
+        trap 'chmod -R u+rwX,g+rwX {params.outdir} 2>/dev/null || true' EXIT
         rm -rf {params.batch_dir}
         mkdir -p {params.outdir}/cnr {params.outdir}/cns {params.outdir}/calls {params.outdir}/plots {params.outdir}/annotation {params.batch_dir}
         workdir=$(mktemp -d {params.outdir}/batch_tmp.XXXXXX)
@@ -38,6 +40,7 @@ rule cnvkit_batch:
             --fasta {params.fasta} \
             --access {params.access} \
             --annotate {params.annotate} \
+            {params.target_avg_size}\
             --processes {threads} \
             --output-dir "$workdir" > {log} 2>&1
         # CNVkit names outputs from the input BAM. Preserve the native output
@@ -49,7 +52,7 @@ rule cnvkit_batch:
         cp -a "$workdir"/. {params.batch_dir}/
         cp "$cnr" {output.cnr}
         cp "$cns" {output.cns}
-        chmod -R u+rwX,g+rX {params.outdir}
+        chmod -R u+rwX,g+rwX {params.outdir}
         rm -rf "$workdir"
         """
 
