@@ -35,6 +35,11 @@ def html_table(frame, max_rows=50):
     return f"{note}<table><thead><tr>{headers}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
 
 
+def scroll_table(frame, max_rows=50):
+    """Render a table inside a scrollable container."""
+    return f"<div class=\"table-scroll\">{html_table(frame, max_rows=max_rows)}</div>"
+
+
 def to_numeric(frame, column):
     """Return a numeric series, using NA values when the column is absent."""
     if column not in frame.columns:
@@ -171,7 +176,7 @@ def ranked_gene_sections(genes, min_overlap=0.8, top_n=10):
     ]
     for title, frame in sections:
         html_parts.append(f"<h3>{escape(title)}</h3>")
-        html_parts.append(html_table(display_gene_columns(frame), max_rows=top_n))
+        html_parts.append(scroll_table(display_gene_columns(frame), max_rows=top_n))
     return "".join(html_parts)
 
 
@@ -248,6 +253,9 @@ def write_comparison_report(
     th, td {{ border: 1px solid #ccc; padding: 0.35rem 0.55rem; text-align: left; vertical-align: top; }}
     th {{ background: #f5f5f5; }}
     .meta p {{ margin: 0.2rem 0; }}
+    .table-scroll {{ max-height: 28rem; overflow: auto; border: 1px solid #ddd; margin-top: 0.8rem; }}
+    .table-scroll table {{ margin-top: 0; }}
+    .table-scroll th {{ position: sticky; top: 0; z-index: 1; }}
   </style>
 </head>
 <body>
