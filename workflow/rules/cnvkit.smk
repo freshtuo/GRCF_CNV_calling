@@ -1,5 +1,6 @@
 # Run CNVkit coverage/binning/segmentation for one comparison.
-# If control_id exists, normal_arg adds `--normal`; otherwise CNVkit runs tumor-only.
+# If control_id exists, normal_arg adds `--normal <bam>`. Otherwise a bare
+# `--normal` asks CNVkit to build a flat reference for tumor-only analysis.
 rule cnvkit_batch:
     input:
         validated=f"{RESULTS}/metadata/validated.ok"
@@ -13,7 +14,7 @@ rule cnvkit_batch:
     params:
         case_id=lambda wildcards: comparison_case_id(wildcards.comparison_id),
         case_bam=lambda wildcards: sample_bam(comparison_case_id(wildcards.comparison_id)),
-        normal_arg=lambda wildcards: f"--normal {sample_bam(comparison_control_id(wildcards.comparison_id))}" if comparison_control_id(wildcards.comparison_id) else "",
+        normal_arg=lambda wildcards: f"--normal {sample_bam(comparison_control_id(wildcards.comparison_id))}" if comparison_control_id(wildcards.comparison_id) else "--normal",
         fasta=lambda wildcards: species_resource(wildcards.comparison_id, "fasta"),
         access=lambda wildcards: species_resource(wildcards.comparison_id, "access_bed"),
         annotate=lambda wildcards: species_resource(wildcards.comparison_id, "cnvkit_annotate"),

@@ -205,12 +205,13 @@ If `control_id` is present, the rule adds:
 --normal control.bam
 ```
 
-If `control_id` is blank, CNVkit runs tumor-only without `--normal`.
+If `control_id` is blank, the rule passes a bare `--normal`, which tells CNVkit
+to build a flat reference for tumor-only analysis.
 
 The main command is:
 
 ```bash
-cnvkit.py batch case.bam [--normal control.bam] \
+cnvkit.py batch case.bam [--normal control.bam | --normal] \
     --method wgs \
     --fasta reference.fa \
     --access access.bed \
