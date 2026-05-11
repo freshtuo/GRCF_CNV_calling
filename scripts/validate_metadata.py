@@ -43,6 +43,14 @@ def duplicate_values(frame, column):
     return sorted(value for value in values[values.duplicated()].unique() if value)
 
 
+def require_positive_int(cfg, dotted_key, default, errors):
+    """Validate an optional positive integer config value."""
+    section, key = dotted_key.split(".", 1)
+    value = (cfg.get(section) or {}).get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        errors.append(f"config.yaml {dotted_key} must be a positive integer; got {value!r}")
+
+
 def main():
     """Validate config, samples.tsv, and comparisons.tsv before workflow jobs run."""
     parser = argparse.ArgumentParser()
@@ -60,6 +68,13 @@ def main():
 
     errors = []
     warnings = []
+
+    for dotted_key, default in (
+        ("facets.preproc_cval", 25),
+        ("facets.proc_cval", 150),
+        ("facets.min_nhet", 15),
+    ):
+        require_positive_int(cfg, dotted_key, default, errors)
 
     # Check file structure first. Later checks assume these columns are present.
     require_columns("samples.tsv", set(samples.columns), REQUIRED_SAMPLE_COLUMNS, errors)

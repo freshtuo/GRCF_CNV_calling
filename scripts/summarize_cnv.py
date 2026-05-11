@@ -99,12 +99,28 @@ def read_purity_ploidy(results, comparison_id):
     """Read FACETS purity/ploidy values if available."""
     frame = read_optional_tsv(purity_ploidy_path(results, comparison_id))
     if frame.empty:
-        return {"purity": "", "ploidy": "", "purity_status": "not_available"}
+        return {
+            "purity": "",
+            "ploidy": "",
+            "purity_status": "not_available",
+            "purity_emflags": "",
+            "facets_preproc_cval": "",
+            "facets_proc_cval": "",
+            "facets_min_nhet": "",
+        }
     row = frame.iloc[0].to_dict()
     purity = row.get("purity", "")
     ploidy = row.get("ploidy", "")
     status = "estimated" if str(purity).strip() else "not_estimated"
-    return {"purity": purity, "ploidy": ploidy, "purity_status": status}
+    return {
+        "purity": purity,
+        "ploidy": ploidy,
+        "purity_status": status,
+        "purity_emflags": row.get("purity_emflags", ""),
+        "facets_preproc_cval": row.get("facets_preproc_cval", ""),
+        "facets_proc_cval": row.get("facets_proc_cval", ""),
+        "facets_min_nhet": row.get("facets_min_nhet", ""),
+    }
 
 
 def cnv_summary_rows(comparisons, results):
@@ -129,12 +145,28 @@ def cnv_summary_rows(comparisons, results):
                     pp["purity"],
                     pp["ploidy"],
                     pp["purity_status"],
+                    pp["purity_emflags"],
+                    pp["facets_preproc_cval"],
+                    pp["facets_proc_cval"],
+                    pp["facets_min_nhet"],
                 )
             )
     return rows
 
 
-def summary_row(comparison, caller, segments, genes, purity, ploidy, purity_status=""):
+def summary_row(
+    comparison,
+    caller,
+    segments,
+    genes,
+    purity,
+    ploidy,
+    purity_status="",
+    purity_emflags="",
+    facets_preproc_cval="",
+    facets_proc_cval="",
+    facets_min_nhet="",
+):
     """Summarize CNV calls for one comparison/caller."""
     return {
         "comparison_id": comparison["comparison_id"],
@@ -155,6 +187,10 @@ def summary_row(comparison, caller, segments, genes, purity, ploidy, purity_stat
         "purity": purity,
         "ploidy": ploidy,
         "purity_status": purity_status,
+        "purity_emflags": purity_emflags,
+        "facets_preproc_cval": facets_preproc_cval,
+        "facets_proc_cval": facets_proc_cval,
+        "facets_min_nhet": facets_min_nhet,
     }
 
 
@@ -171,6 +207,10 @@ def purity_ploidy_rows(comparisons, results):
                 "purity": pp["purity"],
                 "ploidy": pp["ploidy"],
                 "purity_status": pp["purity_status"],
+                "purity_emflags": pp["purity_emflags"],
+                "facets_preproc_cval": pp["facets_preproc_cval"],
+                "facets_proc_cval": pp["facets_proc_cval"],
+                "facets_min_nhet": pp["facets_min_nhet"],
             }
         )
     return rows

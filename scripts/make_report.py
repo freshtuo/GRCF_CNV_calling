@@ -202,10 +202,17 @@ def caller_gene_highlights(genes, purity_ploidy, min_overlap=0.8, top_n=20):
             if not purity_ploidy.empty and "purity_status" in purity_ploidy.columns:
                 status = str(purity_ploidy.iloc[0].get("purity_status", ""))
             if status and status != "estimated":
+                emflags = ""
+                if "purity_emflags" in purity_ploidy.columns:
+                    emflags = str(purity_ploidy.iloc[0].get("purity_emflags", "")).strip()
                 html_parts.append(
                     "<p><strong>Note:</strong> FACETS purity was not estimated for this comparison; "
                     "allele-specific CN and LOH highlights should be interpreted cautiously.</p>"
                 )
+                if emflags:
+                    html_parts.append(
+                        f"<p><strong>FACETS note:</strong> {escape(emflags)}</p>"
+                    )
         html_parts.append(ranked_gene_sections(caller_rows, min_overlap=min_overlap, top_n=top_n))
     return "".join(html_parts) if html_parts else "<p>No gene rows.</p>"
 

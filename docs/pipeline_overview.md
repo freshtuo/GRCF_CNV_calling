@@ -290,17 +290,33 @@ Rscript scripts/run_facets.R \
     --segments facets_segments.tsv \
     --purity-ploidy facets_purity_ploidy.tsv \
     --plot-pdf facets.pdf \
-    --plot-png facets.png
+    --plot-png facets.png \
+    --preproc-cval {facets.preproc_cval} \
+    --proc-cval {facets.proc_cval} \
+    --min-nhet {facets.min_nhet}
 ```
 
 `run_facets.R` performs:
 
 ```r
 rcmat <- readSnpMatrix(opt$pileup)
-xx <- preProcSample(rcmat)
-oo <- procSample(xx)
-fit <- emcncf(oo)
+xx <- preProcSample(rcmat, cval = opt$`preproc-cval`)
+oo <- procSample(xx, cval = opt$`proc-cval`, min.nhet = opt$`min-nhet`)
+fit <- emcncf(oo, min.nhet = opt$`min-nhet`)
 ```
+
+The configured defaults match FACETS 0.6.2 defaults:
+
+```yaml
+facets:
+  preproc_cval: 25
+  proc_cval: 150
+  min_nhet: 15
+```
+
+`facets_purity_ploidy.tsv` records these values along with FACETS `emflags`
+warning/status text so each result captures the exact model settings and any
+purity-estimation diagnostics.
 
 It writes:
 
@@ -489,6 +505,6 @@ Before a real run:
 - Replace all placeholder BAM/BAI/resource paths.
 - Confirm `resources.human.common_snps_vcf` exists if any comparison has `run_facets=yes`.
 - Confirm CNVkit `--method wgs` is appropriate for the BAMs. For targeted/panel/WES data, this may need a different CNVkit setup.
-- Review FACETS defaults in `scripts/run_facets.R`; currently `preProcSample`, `procSample`, and `emcncf` use package defaults.
+- Review FACETS settings in `config/config.yaml`; defaults match FACETS 0.6.2 and are written to the purity/ploidy output.
 - Confirm gene BED chromosome naming is compatible with the references. The annotation script can harmonize common `chr1` versus `1` differences.
 - Interpret tumor-only CNVkit results cautiously because germline CNVs cannot be subtracted without a matched control.

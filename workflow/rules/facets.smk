@@ -13,7 +13,10 @@ rule facets:
         case_bam=lambda wildcards: sample_bam(comparison_case_id(wildcards.comparison_id)),
         control_bam=lambda wildcards: sample_bam(comparison_control_id(wildcards.comparison_id)),
         outdir=lambda wildcards, output: str(Path(output.segments).parents[1]),
-        comparison_id="{comparison_id}"
+        comparison_id="{comparison_id}",
+        preproc_cval=lambda wildcards: (config.get("facets") or {}).get("preproc_cval", 25),
+        proc_cval=lambda wildcards: (config.get("facets") or {}).get("proc_cval", 150),
+        min_nhet=lambda wildcards: (config.get("facets") or {}).get("min_nhet", 15)
     log:
         f"{RESULTS}/facets/{{comparison_id}}/facets.log"
     conda:
@@ -35,5 +38,8 @@ rule facets:
             --segments {output.segments} \
             --purity-ploidy {output.purity_ploidy} \
             --plot-pdf {output.plot_pdf} \
-            --plot-png {output.plot_png} >> {log} 2>&1
+            --plot-png {output.plot_png} \
+            --preproc-cval {params.preproc_cval} \
+            --proc-cval {params.proc_cval} \
+            --min-nhet {params.min_nhet} >> {log} 2>&1
         """

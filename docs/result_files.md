@@ -242,7 +242,29 @@ facets/<comparison_id>/purity_ploidy/facets_purity_ploidy.tsv
 summary/all_comparisons.purity_ploidy.tsv
 ```
 
-Contains FACETS global purity and ploidy estimates when available.
+Contains FACETS global purity and ploidy estimates when available. The table
+also records FACETS purity-estimation warning text and the FACETS model
+parameters used for that run:
+
+```text
+purity_emflags
+facets_preproc_cval
+facets_proc_cval
+facets_min_nhet
+```
+
+The default values in `config/config.yaml` match FACETS 0.6.2 defaults:
+
+```text
+preProcSample(..., cval = 25)
+procSample(..., cval = 150, min.nhet = 15)
+emcncf(..., min.nhet = 15)
+```
+
+These parameters are recorded so results remain interpretable if FACETS
+defaults or project settings change later. Do not change them for routine runs
+unless you understand the effect and keep parameter-specific sensitivity
+results separate from primary pipeline outputs.
 
 Blank purity with ploidy `2` can occur when FACETS produces segment calls but
 does not return a confident global purity estimate. In that case, FACETS
